@@ -1,22 +1,25 @@
 <?php 
 session_start();
-include("../DB_connection.php"); // Ensure this path is correct
+include("../DB_connection.php"); 
 
-if (isset($_POST['register'])) { // Check if form is submitted
+if (isset($_POST['register'])) { 
     $name = $_POST["name"];
     $email = $_POST["email"];
-    $password = password_hash($_POST["password"], PASSWORD_DEFAULT); // Secure password
+    $password = password_hash($_POST["password"], PASSWORD_DEFAULT); 
     $phone = $_POST["phone"];
     $address = $_POST["address"];
     $role = $_POST["role"];
 
-    // Insert user into database
-    $sql = "INSERT INTO users (name, email, password, phone, address, role) 
-            VALUES ('$name', '$email', '$password', '$phone', '$address', '$role')";
+    // Only caterers require admin approval
+    $isApproved = ($role === 'customer') ? 1 : 0; 
+    
+    $sql = "INSERT INTO users (name, email, password, role, is_approved) 
+        VALUES ('$name', '$email', '$password', '$role', $isApproved)";
 
+  
     if ($conn->query($sql) === TRUE) {
-        header("Location:home.php"); // Redirect to home page
-        exit(); // Ensure script stops execution after redirect
+        header("Location:login.php");
+        exit(); 
     }
     $conn->close();
 }
@@ -52,7 +55,7 @@ if (isset($_POST['register'])) { // Check if form is submitted
         <input type="radio" name="role" value="customer" required> Customer<br>
         <input type="radio" name="role" value="caterer" required> Caterer<br>
 
-        <button type="submit" name="register">Register</button> <!-- Submit button must have name="register" -->
+        <button type="submit" name="register">Register</button> 
     </form>
 </body>
 </html>

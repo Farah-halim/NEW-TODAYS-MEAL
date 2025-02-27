@@ -17,24 +17,30 @@ if (isset($_POST['submit'])) {
     }
 
     if (count($error) == 0) {
-        // Fetch user data
-        $sql = "SELECT user_id, name, role, password FROM users WHERE email = '$email'";
+        $sql = "SELECT user_id, name, role, password, is_approved FROM users WHERE email = '$email'";
         $result = mysqli_query($conn, $sql);
 
         if ($result && mysqli_num_rows($result) == 1) {
             $user = mysqli_fetch_assoc($result);
 
             if (password_verify($password, $user['password'])) {
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['user_name'] = $user['name'];
-                $_SESSION['user_role'] = $user['role'];
+                if ($user['role'] === 'caterer' && $user['is_approved'] == 0) {
+                    echo "Your account is under review. Please wait for admin approval.";
+                } 
+                else {
+                    $_SESSION['user_id'] = $user['user_id'];
+                    $_SESSION['user_name'] = $user['name'];
+                    $_SESSION['user_role'] = $user['role'];
 
-                header("Location: home.php");
-                exit();
-            } else {
+                    header("Location: home.php");
+                    exit();
+                }
+            } 
+            else {
                 echo "Incorrect email or password.";
             }
-        } else {
+        } 
+        else {
             echo "Incorrect email or password.";
         }
     }

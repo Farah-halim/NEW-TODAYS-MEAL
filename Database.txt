@@ -8,4 +8,6 @@ Tables:
     phone VARCHAR(20) ,
     address VARCHAR(255),
     role ENUM ('caterer', 'customer', 'admin') ,
-    created_at TIMESTAMP  CURRENT_TIMESTAMP
+    created_at TIMESTAMP  CURRENT_TIMESTAMP,
+    is_approved --> " use this sql code in your php admin click on sql-> paste the code -> click on GO button
+    ////  ALTER TABLE users ADD COLUMN is_approved BOOLEAN NOT NULL;  /// "
