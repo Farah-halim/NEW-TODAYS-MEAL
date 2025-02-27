@@ -12,9 +12,9 @@ if (isset($_POST['register'])) {
 
     // Only caterers require admin approval
     $isApproved = ($role === 'customer') ? 1 : 0; 
-    
-    $sql = "INSERT INTO users (name, email, password, role, is_approved) 
-        VALUES ('$name', '$email', '$password', '$role', $isApproved)";
+
+    $sql = "INSERT INTO users (name, email, password, phone, role, is_approved) 
+        VALUES ('$name', '$email', '$password','$phone','$role', $isApproved)";
 
   
     if ($conn->query($sql) === TRUE) {
