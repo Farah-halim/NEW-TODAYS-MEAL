@@ -31,10 +31,14 @@ if (isset($_POST['submit'])) {
                     $_SESSION['user_id'] = $user['user_id'];
                     $_SESSION['user_name'] = $user['name'];
                     $_SESSION['user_role'] = $user['role'];
-
-                    header("Location: home.php");
-                    exit();
-                }
+                
+                    if ($_SESSION['user_role'] === 'caterer') {
+                        header("Location: caterer/home.php");
+                        exit();} 
+                    else {
+                        header("Location: customer/home.php"); 
+                        exit();}
+                }          
             } 
             else {
                 echo "Incorrect email or password.";
@@ -48,7 +52,6 @@ if (isset($_POST['submit'])) {
 
 mysqli_close($conn);
 ?>
-
 
 <!DOCTYPE html>
 <html>

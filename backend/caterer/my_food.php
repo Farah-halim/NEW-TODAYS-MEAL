@@ -7,7 +7,6 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'caterer') {
 }
 $caterer_id = $_SESSION['user_id'];
 
-// Fetch the caterer's food items along with their categories
 $sql = "
     SELECT f.*, GROUP_CONCAT(c.category_name SEPARATOR ', ') AS categories
     FROM food f
@@ -32,7 +31,7 @@ $result = $conn->query($sql);  ?>
         <h2>My Food Items</h2>
         <div class="food-container">
             <?php if ($result->num_rows > 0): ?> 
-                <?php while ($row = $result->fetch_assoc()): ?>  <!-- Loop through each food item in the result set -->
+                <?php while ($row = $result->fetch_assoc()): ?>  
                     <div class="food-card">
                         <img src="../../<?php echo $row['image']; ?>" alt="Food Image">
                         <div class="food-info">
