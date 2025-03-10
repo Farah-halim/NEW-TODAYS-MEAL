@@ -1,0 +1,221 @@
+/* General Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f8f1dc;
+    padding-top: 70px; /* Prevents content from being hidden under fixed navbar */
+}
+
+/* Header */
+header {
+    width: 100%;
+    background-color: #ff6600;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    padding: 3px 10px;
+    height: 40px;
+}
+
+/* Logo */
+.logo-container {
+    display: flex;
+    align-items: center;
+}
+.logo-container img {
+    height: 25px;
+    margin-right: 6px;
+}
+.logo {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Navigation */
+nav {
+    flex-grow: 1;
+    text-align: right; /* Aligns the nav bar to the right */
+    margin-right: 30px; /* Push it more to the right */
+}
+nav ul {
+    list-style: none;
+    display: flex;
+    font-size: small;
+    gap: 15px;
+    margin: 0;
+    padding: 0;
+    justify-content: flex-end; /* Ensures alignment to the right */
+}
+nav ul li {
+    display: inline;
+}
+nav ul li a {
+    text-decoration: none;
+    color: white;
+    font-size: 14px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    transition: 0.3s ease-in-out;
+}
+
+.login-btn,
+.register-btn {
+    background: white;
+    color: #ff6600;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: 0.3s ease-in-out;
+}
+.login-btn:hover,
+.register-btn:hover {
+    background: rgb(127, 23, 23); 
+    color: white;
+}
+
+
+main {
+    display: flex;
+    max-width: 40%;
+    margin: 80px auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    padding: 20px;
+}
+
+/* Left Section */
+.left-section {
+    align-content: center;
+    flex: 1;
+    padding: 30px;
+}
+.left-section img {
+    width: 100%;
+    border-radius: 10px;
+}
+
+/* Highlighted Text */
+.highlight-text {
+    text-align: center;
+    font-size: 16px;
+    color: #333;
+    margin: 15px 0;
+    font-weight: 600; /* Bold */
+    background-color: #fff3cd; /* Light yellow */
+    padding: 10px;
+    border-radius: 5px;
+    border-left: 4px solid #ff6600;
+}
+
+.right-section {
+    align-items: center;
+    flex: 1;
+    padding: 10px;
+    background: #fff;
+}
+h2 {
+    color: black;
+    font-size: 20px;
+}
+
+
+/* Smaller Form */
+form {
+    text-align: center;
+    font-weight:bold;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    width: 100%;
+}
+/* Checkbox Container */
+.checkbox-container {
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    align-items: flex-start; /* Align to the left */
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* Checkbox Label */
+.checkbox-container label {
+    display: flex;
+    align-items: center;
+    gap: 6px; /* Space between checkbox and text */
+    font-size: 14px;
+    color: #333;
+}
+
+/* Styling for the Checkbox */
+.checkbox-container input[type="checkbox"] {
+    width: 16px; /* Adjust size */
+    height: 16px;
+    accent-color: #ff6600; /* Change checkbox color */
+    cursor: pointer;
+}
+
+/* Forgot Password Link */
+.checkbox-container a {
+    font-size: 13px;
+    color: #ff6600;
+    text-decoration: none;
+    margin-top: 5px;
+}
+
+.checkbox-container a:hover {
+    text-decoration: underline;
+}
+
+
+/* Smaller Buttons */
+.submit-btn {
+    background: #ff6600;
+    color: white;
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+.submit-btn:hover {
+    background: #ff4500;
+}
+
+/* Links */
+a {
+    color: #ff6600;
+    text-decoration: none;
+}
+
+footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    width: 100%;
+    padding: 5px; /* Reduced padding */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 40px; /* Controls footer height */
+    font-size: 14px; /* Smaller text */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

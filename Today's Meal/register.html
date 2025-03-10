@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Meal - Register</title>
+    <link rel="stylesheet" href="register.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const buttons = document.querySelectorAll(".account-type button");
+            buttons.forEach(button => {
+                button.addEventListener("click", function () {
+                    buttons.forEach(btn => btn.classList.remove("active"));
+                    this.classList.add("active");
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="logo.jpg" alt="Logo">
+            <div class="logo">Today's Meal</div>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Menu</a></li>
+                <li><a href="#">About Us</a></li>
+                <li><a href="#">Contact</a></li>
+                <li><a href="login.html" class="login-btn">Login</a></li>
+                <li><a href="#" class="register-btn">Register</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="left-section">
+            <img src="food.jpg" alt="Delicious food">
+            <h2>Join Our Culinary Community</h2>
+            <p class="highlight-text">
+                Connect with the best home cooks in Egypt or order delicious homemade meals directly to your doorstep.
+            </p>
+        </section>
+
+        <section class="right-section">
+            <h2>Create an Account</h2>
+            <div class="account-type">
+                <button class="active">Customer</button>
+                <button>Caterer</button>
+            </div>
+            <form>
+                <label>Full Name</label>
+                <input type="text" placeholder="Enter your full name">
+                <label>Email address</label>
+                <input type="email" placeholder="Enter your email">
+                <label>Phone Number</label>
+                <input type="tel" placeholder="Enter your phone number">
+                <label>Password</label>
+                <input type="password" placeholder="Create a password">
+                <label>Confirm Password</label>
+                <input type="password" placeholder="Confirm your password">
+                <label><input type="checkbox"> I agree to the <a href="#">Terms and Conditions</a></label>
+                <button type="submit" class="submit-btn">Create Account</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Today's Meal. All rights reserved.</p>
+    </footer>
+</body>
+</html>
