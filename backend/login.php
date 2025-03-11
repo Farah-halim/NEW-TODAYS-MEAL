@@ -9,12 +9,10 @@ if (isset($_POST['submit'])) {
     $error = array();
 
     if (empty($email)) {
-        array_push($error, "Email is required");
-    }
+        array_push($error, "Email is required");}
 
     if (empty($password)) {
-        array_push($error, "Password is required");
-    }
+        array_push($error, "Password is required");}
 
     if (count($error) == 0) {
         $sql = "SELECT user_id, name, role, password, is_approved FROM users WHERE email = '$email'";
@@ -38,18 +36,13 @@ if (isset($_POST['submit'])) {
                     else {
                         header("Location: customer/home.php"); 
                         exit();}
-                }          
-            } 
+                }} 
             else {
                 echo "Incorrect email or password.";
-            }
-        } 
+            }} 
         else {
             echo "Incorrect email or password.";
-        }
-    }
-}
-
+        }}}
 mysqli_close($conn);
 ?>
 
@@ -71,12 +64,10 @@ mysqli_close($conn);
                 <input type="password" placeholder="Password" name="password" id="password" required>
                 <button type="submit" class="btn-contact" name="submit" > Submit </button>
             </form>
-            <a href="register.php"> New user? Register Now </a>
-
+            <a href="register.php"> New user? Register Now </a> <br>
+            <a href="forgot_password.php"> Forgot password </a>
         </div>
-     
     </div>
 </div>
-
 </body>
 </html>

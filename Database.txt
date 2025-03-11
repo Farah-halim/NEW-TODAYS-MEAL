@@ -11,6 +11,8 @@ Tables:
     created_at TIMESTAMP  CURRENT_TIMESTAMP,
     is_approved --> " use this sql code in your php admin click on sql-> paste the code -> click on GO button
     ////  ALTER TABLE users ADD COLUMN is_approved BOOLEAN NOT NULL;  /// "
+    reset_token VARCHAR(255),
+    reset_token_expiry DATETIME
 
 2- food
     " open today's meal database > click on Sql > paste the query > click on go "
