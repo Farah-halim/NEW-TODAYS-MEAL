@@ -1,0 +1,240 @@
+/* Import Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+/* General Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f8f1dc;
+    padding-top: 70px; /* Prevents content from being hidden under fixed navbar */
+}
+
+/* Header */
+header {
+    width: 100%;
+    background-color: #ff6600;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    padding: 3px 10px;
+    height: 40px;
+}
+
+/* Logo */
+.logo-container {
+    display: flex;
+    align-items: center;
+}
+.logo-container img {
+    height: 25px;
+    margin-right: 6px;
+}
+.logo {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Navigation */
+nav {
+    flex-grow: 1;
+    text-align: right; /* Aligns the nav bar to the right */
+    margin-right: 30px; /* Push it more to the right */
+}
+nav ul {
+    list-style: none;
+    display: flex;
+    font-size: small;
+    gap: 15px;
+    margin: 0;
+    padding: 0;
+    justify-content: flex-end; /* Ensures alignment to the right */
+}
+nav ul li {
+    display: inline;
+}
+nav ul li a {
+    text-decoration: none;
+    color: white;
+    font-size: 14px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    transition: 0.3s ease-in-out;
+}
+
+.login-btn,
+.register-btn {
+    background: white;
+    color: #ff6600;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: 0.3s ease-in-out;
+}
+.login-btn:hover,
+.register-btn:hover {
+    background: rgb(127, 23, 23); 
+    color: white;
+}
+
+
+
+
+
+/* Main Container */
+main {
+    display: flex;
+    max-width: 40%;
+    margin: 80px auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    padding: 20px;
+}
+
+/* Left Section */
+.left-section {
+    flex: 1;
+    padding: 20px;
+    text-align: center;
+}
+.left-section img {
+    width: 100%;
+    border-radius: 10px;
+}
+
+/* Highlighted Text */
+.highlight-text {
+    text-align: center;
+    font-size: 16px;
+    color: #333;
+    margin: 15px 0;
+    font-weight: 600; /* Bold */
+    background-color: #fff3cd; /* Light yellow */
+    padding: 10px;
+    border-radius: 5px;
+    border-left: 4px solid #ff6600;
+}
+
+/* Right Section */
+.right-section {
+    flex: 1;
+    padding: 20px;
+    background: #fff;
+}
+h2 {
+    color: #333;
+    font-size: 20px;
+}
+.account-type {
+    align-items: center;    
+    display: flex;
+    gap: 15px;
+    margin-left: 10px;
+    margin-bottom: 20px;
+}
+.account-type button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: #ff6600;
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.account-type button.active {
+    background: #ff4500;
+}
+
+/* Smaller Form */
+form {
+    text-align: center;
+    font-weight:bold;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    width: 100%;
+}
+/* Checkbox Label */
+label {
+    display: inline-flex;
+    align-items: center; /* Aligns checkbox and text in the same line */
+    gap: 6px; /* Space between checkbox and text */
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    white-space: nowrap; /* Prevents text from wrapping */
+}
+
+/* Styling for the Checkbox */
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #ff6600; /* Change checkbox color */
+    cursor: pointer;
+}
+
+/* Terms and Conditions Link */
+label a {
+    color: #ff6600;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+label a:hover {
+    text-decoration: underline;
+}
+
+
+
+/* Smaller Buttons */
+.submit-btn {
+    background: #ff6600;
+    color: white;
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+.submit-btn:hover {
+    background: #ff4500;
+}
+
+/* Links */
+a {
+    color: #ff6600;
+    text-decoration: none;
+}
+
+footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    width: 100%;
+    padding: 5px; /* Reduced padding */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 40px; /* Controls footer height */
+    font-size: 14px; /* Smaller text */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
