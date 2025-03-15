@@ -15,7 +15,7 @@ if (isset($_POST['submit'])) {
         array_push($error, "Password is required");}
 
     if (count($error) == 0) {
-        $sql = "SELECT user_id, name, role, password, is_approved FROM users WHERE email = '$email'";
+        $sql = "SELECT user_id, fiest_name, role, password, is_approved FROM users WHERE email = '$email'";
         $result = mysqli_query($conn, $sql);
 
         if ($result && mysqli_num_rows($result) == 1) {
