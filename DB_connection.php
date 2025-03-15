@@ -1,9 +1,9 @@
 <?php
 // Database Configuration
-$host = "localhost";  // Change if using a remote database
-$dbname = "today's meal";  // Replace with your actual database name
-$username = "root";  // Default for XAMPP (change if needed)
-$password = "";  // Default for XAMPP (change if you have set a password)
+$host = "localhost";  
+$dbname = "today's meal";  
+$username = "root";  
+$password = "";  
 
 // Create connection
 $conn = new mysqli($host, $username, $password, $dbname);
