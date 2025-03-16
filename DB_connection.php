@@ -1,12 +1,18 @@
 <?php
-$host = "localhost";
-$dbname = "today's meal"; 
-$username = "root";
-$password = "";
+// Database Configuration
+$host = "localhost";  
+$dbname = "today's meal";  
+$username = "root";  
+$password = "";  
 
+// Create connection
 $conn = new mysqli($host, $username, $password, $dbname);
 
-if ($conn -> connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+// Check connection
+if ($conn->connect_error) {
+    die("Database Connection Failed: " . $conn->connect_error);
 }
+
+// Set charset to UTF-8
+$conn->set_charset("utf8");
 ?>

@@ -1,26 +1,33 @@
-<?php 
+<?php
 session_start();
-include("../DB_connection.php"); 
+require '../DB_connection.php'; // Database connection
 
-if (isset($_POST['register'])) { 
-    $name = $_POST["name"];
+if (isset($_POST['register'])) {
+    $first_name = $_POST["first_name"];
+    $last_name = $_POST["last_name"];
+    $username = $_POST["username"];
     $email = $_POST["email"];
-    $password = password_hash($_POST["password"], PASSWORD_DEFAULT); 
+    $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
     $phone = $_POST["phone"];
-    $address = $_POST["address"];
+    $address1 = $_POST["address1"];
+    $address2 = $_POST["address2"];
     $role = $_POST["role"];
+    $isApproved = ($role === 'customer') ? 1 : 0; // Default approval for customers
 
-    // Only caterers require admin approval
-    $isApproved = ($role === 'customer') ? 1 : 0; 
+    // Insert into `users` table
+    $sql = "INSERT INTO users (first_name, last_name, username, email, password, phone, address1, address2, role, is_approved) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sssssssssi", $first_name, $last_name, $username, $email, $password, $phone, $address1, $address2, $role, $isApproved);
 
-    $sql = "INSERT INTO users (name, email, password, phone, role, is_approved) 
-        VALUES ('$name', '$email', '$password','$phone','$role', $isApproved)";
-
-  
-    if ($conn->query($sql) === TRUE) {
-        header("Location:login.php");
-        exit(); 
+    if ($stmt->execute()) {
+        header("Location: login.php");
+        exit();
+    } else {
+        echo "Error: " . $stmt->error;
     }
+
+    $stmt->close();
     $conn->close();
 }
 ?>
@@ -36,8 +43,14 @@ if (isset($_POST['register'])) {
 <body>
     <h2>User Registration</h2>
     <form action="register.php" method="POST">
-        <label>Name:</label>
-        <input type="text" name="name" required><br>
+        <label>fName:</label>
+        <input type="text" name="first_name" required><br>
+
+        <label>lName:</label>
+        <input type="text" name="last_name" required><br>
+
+        <label>uName:</label>
+        <input type="text" name="username" required><br>
 
         <label>Email:</label>
         <input type="email" name="email" required><br>
@@ -49,7 +62,10 @@ if (isset($_POST['register'])) {
         <input type="number" name="phone" required><br>
 
         <label>Address:</label>
-        <input type="text" name="address" required><br>
+        <input type="text" name="address1" required><br>
+
+        <label>Address:</label>
+        <input type="text" name="address2" required><br>
 
         <label>Role:</label><br>
         <input type="radio" name="role" value="customer" required> Customer<br>

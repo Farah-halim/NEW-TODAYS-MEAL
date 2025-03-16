@@ -1,46 +1,40 @@
 <?php
 session_start();
-include("../DB_connection.php"); 
+require '../DB_connection.php'; // Database connection
+
+if (isset($_SESSION['error_message'])) {
+    echo "<p style='color: red; font-weight: bold;'>" . $_SESSION['error_message'] . "</p>";
+    unset($_SESSION['error_message']); // Clear the message after displaying it
+}
+
 
 if (isset($_POST['submit'])) {
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $password = $_POST['password'];
 
-    $error = array();
-
     if (empty($email) || empty($password)) {
-        array_push($error, "Email and password cannot be empty.");}
+        echo "Email and password are required.";
+        exit();
+    }
 
-    if (count($error) == 0) {
-        $sql = "SELECT user_id, name, role, password, is_approved FROM users WHERE email = '$email'";
-        $result = mysqli_query($conn, $sql);
-
-        if ($result && mysqli_num_rows($result) == 1) {
-            $user = mysqli_fetch_assoc($result);
-
-            if (password_verify($password, $user['password'])) {
-                if ($user['role'] === 'caterer' && $user['is_approved'] == 0) {
-                    echo "Your account is under review. Please wait for admin approval.";
-                } 
-                else {
-                    $_SESSION['user_id'] = $user['user_id'];
-                    $_SESSION['user_name'] = $user['name'];
-                    $_SESSION['user_role'] = $user['role'];
-                
-                    if ($_SESSION['user_role'] === 'caterer') {
-                        header("Location: caterer/home.php");
-                        exit();} 
-                    else {
-                        header("Location: customer/home.php"); 
-                        exit();}
-                }} 
-            else {
-                echo "Incorrect email or password.";
-            }} 
-        else {
+                if ($_SESSION['user_role'] === 'caterer') {
+                    header("Location: caterer/home.php");
+                } else {
+                    header("Location: customer/home.php");
+                }
+                exit();
+            }
+        } else {
             echo "Incorrect email or password.";
-        }}}
-mysqli_close($conn);
+        }
+    } else {
+        echo "Incorrect email or password.";
+    }
+
+    $stmt->close();
+}
+
+$conn->close();
 ?>
 
 <!DOCTYPE html>
