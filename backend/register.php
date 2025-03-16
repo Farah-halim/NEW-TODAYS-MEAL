@@ -28,53 +28,56 @@
                 <button data-type="caterer">Caterer</button>
                 <button data-type="delivery">Delivery Man</button>
             </div>
-            <form>
+            <form method="POST" action="" enctype="multipart/form-data">
                 <label>Full Name</label>
-                <input type="text" placeholder="Enter your full name">
+                <input type="text" name="name" placeholder="Enter your full name" required>
 
                 <label>Email address</label>
-                <input type="email" placeholder="Enter your email">
+                <input type="email" name="email" placeholder="Enter your email" required>
 
                 <label>Phone Number</label>
-                <input type="tel" placeholder="Enter your phone number">
+                <input type="tel" name="phone" placeholder="Enter your phone number" required>
+
+                <label>Address</label>
+                <input type="text" name="customer_address" placeholder="Enter your full address" required>
 
                 <label>Password</label>
-                <input type="password" placeholder="Create a password">
-
-                <label>Confirm Password</label>
-                <input type="password" placeholder="Confirm your password">
+                <input type="password" name="password" placeholder="Create a password" required>
 
                 <!-- Caterer Fields -->
                 <div id="caterer-fields" class="hidden">
                     <label>Years of Experience</label>
-                    <input type="number" placeholder="Enter years of experience">
+                    <select name="experience" class="styled-select" required>
+                        <option value="" disabled selected>Select your experience level</option>
+                        <option value="No Experience">No Experience</option>
+                        <option value="Beginner">Beginner (0-1 years)</option>
+                        <option value="Intermediate">Intermediate (2-3 years)</option>
+                        <option value="Advanced">Advanced (4-5 years)</option>
+                        <option value="Expert">Expert (6+ years)</option>
+                    </select>
 
                     <label>Category of Food</label>
-                    <input type="text" placeholder="E.g., Desserts, Egyptian Cuisine, Healthy Meals">
+                    <select name="category" class="styled-select" required>
+                        <option value="" disabled selected>Select food category</option>
+                        <option value="Desserts">Desserts</option>
+                        <option value="Drinks">Drinks</option>
+                        <option value="Fast Food">Fast Food</option>
+                        <option value="Italian">Italian</option>
+                        <option value="Seafood">Seafood</option>
+                        <option value="Vegetarian">Vegetarian</option>
+                    </select>
 
-                    <label>Brief on what you serve</label>
-                    <textarea placeholder="Describe your meals and specialties"></textarea>
-
-                    <label>Upload Logo</label>
-                    <input type="file" accept="image/*">
-
-                    <label>Upload National ID</label>
-                    <input type="file" accept="image/*,application/pdf">
-
-                    <label>Location</label>
-                    <input type="text" placeholder="Enter your location">
+                    <label>National ID Number</label>
+                    <input type="text" name="national_id" placeholder="Enter your National ID number" pattern="\d*" maxlength="14" required>
                 </div>
 
                 <!-- Delivery Man Fields -->
                 <div id="delivery-fields" class="hidden">
-                    <label>Upload National ID</label>
-                    <input type="file" accept="image/*,application/pdf">
+                    <label>National ID Number</label>
+                    <input type="text" name="delivery_national_id" placeholder="Enter your National ID number" pattern="\d*" maxlength="14" required>
 
-                    <label>Upload Driver's License</label>
-                    <input type="file" accept="image/*,application/pdf">
-
-                    <label>Date of Birth</label>
-                    <input type="date">
+                    <label>Driver's License Number</label>
+                    <input type="text" name="license_number" placeholder="Enter your driver's license number" pattern="\d*" maxlength="14" required>
                 </div>
                 <div class="terms-container">
                     <input type="checkbox" id="terms">
@@ -89,6 +92,6 @@
         </section>
     </main> 
     <?php include 'footer.php'; ?> 
-
+    <script src="register.js"></script>
 </body>
 </html>
