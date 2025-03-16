@@ -1,77 +1,94 @@
-<?php
-session_start();
-require '../DB_connection.php'; // Database connection
-
-if (isset($_POST['register'])) {
-    $first_name = $_POST["first_name"];
-    $last_name = $_POST["last_name"];
-    $username = $_POST["username"];
-    $email = $_POST["email"];
-    $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
-    $phone = $_POST["phone"];
-    $address1 = $_POST["address1"];
-    $address2 = $_POST["address2"];
-    $role = $_POST["role"];
-    $isApproved = ($role === 'customer') ? 1 : 0; // Default approval for customers
-
-    // Insert into `users` table
-    $sql = "INSERT INTO users (first_name, last_name, username, email, password, phone, address1, address2, role, is_approved) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssssssssi", $first_name, $last_name, $username, $email, $password, $phone, $address1, $address2, $role, $isApproved);
-
-    if ($stmt->execute()) {
-        header("Location: login.php");
-        exit();
-    } else {
-        echo "Error: " . $stmt->error;
-    }
-
-    $stmt->close();
-    $conn->close();
-}
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <link rel="stylesheet" href="../frontend/css/register.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Today's Meal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="register.css"> 
 </head>
-<body>
-    <h2>User Registration</h2>
-    <form action="register.php" method="POST">
-        <label>fName:</label>
-        <input type="text" name="first_name" required><br>
+    <body>
 
-        <label>lName:</label>
-        <input type="text" name="last_name" required><br>
+    <?php include 'nav3.php'; ?>
 
-        <label>uName:</label>
-        <input type="text" name="username" required><br>
+    <main>
+        <section class="left-section">
+        <img src="../images/food.jpg" alt="Delicious food">
+        <h2>Join Our Culinary Community</h2>
+            <p class="highlight-text">
+                Connect with the best home cooks in Egypt, order delicious homemade meals, or become a delivery partner.
+            </p>
+        </section>
 
-        <label>Email:</label>
-        <input type="email" name="email" required><br>
+        <section class="right-section">
+            <h2>Create an Account</h2>
+            <div class="account-type">
+                <button class="active" data-type="customer">Customer</button>
+                <button data-type="caterer">Caterer</button>
+                <button data-type="delivery">Delivery Man</button>
+            </div>
+            <form>
+                <label>Full Name</label>
+                <input type="text" placeholder="Enter your full name">
 
-        <label>Password:</label>
-        <input type="password" name="password" required><br>
+                <label>Email address</label>
+                <input type="email" placeholder="Enter your email">
 
-        <label>Phone:</label>
-        <input type="number" name="phone" required><br>
+                <label>Phone Number</label>
+                <input type="tel" placeholder="Enter your phone number">
 
-        <label>Address:</label>
-        <input type="text" name="address1" required><br>
+                <label>Password</label>
+                <input type="password" placeholder="Create a password">
 
-        <label>Address:</label>
-        <input type="text" name="address2" required><br>
+                <label>Confirm Password</label>
+                <input type="password" placeholder="Confirm your password">
 
-        <label>Role:</label><br>
-        <input type="radio" name="role" value="customer" required> Customer<br>
-        <input type="radio" name="role" value="caterer" required> Caterer<br>
+                <!-- Caterer Fields -->
+                <div id="caterer-fields" class="hidden">
+                    <label>Years of Experience</label>
+                    <input type="number" placeholder="Enter years of experience">
 
-        <button type="submit" name="register">Register</button> 
-    </form>
+                    <label>Category of Food</label>
+                    <input type="text" placeholder="E.g., Desserts, Egyptian Cuisine, Healthy Meals">
+
+                    <label>Brief on what you serve</label>
+                    <textarea placeholder="Describe your meals and specialties"></textarea>
+
+                    <label>Upload Logo</label>
+                    <input type="file" accept="image/*">
+
+                    <label>Upload National ID</label>
+                    <input type="file" accept="image/*,application/pdf">
+
+                    <label>Location</label>
+                    <input type="text" placeholder="Enter your location">
+                </div>
+
+                <!-- Delivery Man Fields -->
+                <div id="delivery-fields" class="hidden">
+                    <label>Upload National ID</label>
+                    <input type="file" accept="image/*,application/pdf">
+
+                    <label>Upload Driver's License</label>
+                    <input type="file" accept="image/*,application/pdf">
+
+                    <label>Date of Birth</label>
+                    <input type="date">
+                </div>
+                <div class="terms-container">
+                    <input type="checkbox" id="terms">
+                    <label for="terms">I agree to the terms and conditions</label>
+                </div>
+
+
+                <button type="submit" class="submit-btn">Create Account</button>
+                <p class="login-link">
+    Already have an account? <a href="login.php">Log in</a> </p>
+            </form>
+        </section>
+    </main> 
+    <?php include 'footer.php'; ?> 
+
 </body>
 </html>
