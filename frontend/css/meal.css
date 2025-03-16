@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f8f9fa;
+}
+
+.sidebar, .navbar, .footer {
+    font-family: 'Poppins', sans-serif;
+}
+
+.nav-link, .logout-btn, h4, .badge, .form-control, label, .btn-primary, .btn-primary2 {
+    font-family: 'Poppins', sans-serif;
+}
+
+.sidebar {
+    width: 250px;
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #eef2f7, #ffffff);
+}
+
+.nav-link {
+    font-size: 0.5rem;
+}
+
+.nav-link:hover {
+    text-decoration: underline;
+}
+
+.logout-btn {
+    font-size: 1rem;
+    font-weight: lighter;
+    border-color: transparent;
+}
+
+.container {
+    max-width: 1000px;
+}
+
+h4 {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+form label {
+    font-weight: bold;
+}
+
+.form-control {
+    background-color: #e9ecef;
+    border: none;
+    padding: 10px;
+}
+
+.input-group-text {
+    background: transparent;
+    cursor: pointer;
+    border: none;
+
+}
+
+.toggle-password i {
+    color: #3E7EA6;
+}
+
+label span.required {
+    color: red;
+}
+
+.text-customt{
+    color: #3E7EA6;
+}
+
+.text-custom {
+    color: #ED8A42; /* Change this to any color */
+}
+
+.sidebar .nav-link i {
+    color: #ED8A42 !important; /* Change sidebar icons to white */
+}
+
+.badge {
+    background-color: #3E7EA6 !important; /* Orange */
+    color: white !important;
+    padding: 10px 15px;
+    font-size: 18px;
+    border-radius: 50%;
+}
+
+.btn-primary {
+    margin-top: 15px;  /* Adjust margin as needed */
+    background-color: #ED8A42 !important; /* Change to orange */
+    border-color: #ED8A42 !important;
+    transition-duration: 5s;
+    cursor: pointer;
+}
+
+.btn-primary2 {
+    margin-top: 15px;  /* Adjust margin as needed */
+
+    transition-duration: 5s;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+
+.navbar{
+    background-color: #3E7EA6;
+}
+  
+.sticky-footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    z-index: 1030; /* Ensure it's above other elements */
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+li:not(:last-child) {
+    margin-bottom: 10px;
+}
+
+@media (max-width: 991px) {
+
+    body, .sidebar, .navbar, .footer, .profile-dropdown, .inputs {
+        font-size: 0.5rem;
+    }
+    .nav-link, .logout-btn, h4, .badge, .form-control, label, .btn-primary, .btn-primary2, .btn-light, .btn {
+        font-size: 0.4rem;
+    }
+
+}
+
+.profile-container {
+    display: flex;
+    justify-content: space-between;
+}
+.profile-dropdown {
+    display: none;
+}
+@media (max-width: 991px) {
+    .profile-container {
+        display: none;
+    }
+    .profile-dropdown {
+        display: block;
+    }
+    .dropdown-btn {
+        background-color: rgb(228, 246, 255);
+        color: black;
+        padding: 5px;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+        margin-bottom: 3px;
+    }
+    .dropdown-content {
+        display: none;
+        padding: 5px;
+        background: #ffffff;
+        position: absolute;
+    }
+
+    .profile-image {
+        text-align: center;
+        margin-top: 20px;
+        
+    }
+    .profile-image img {
+        width: 500px;
+        height: 300px;
+        object-fit: fill; }
+
+    .e1, .p1, .m1{
+        display: none;
+
+    }
+    .btn{
+        font-size: 0.5rem;
+    }
+    input{
+        height: 1.5rem;
+    }
+    .btnu{
+        color: #e9ecef;
+        background-color: #ED8A42;
+    }
+    
+}
+@media (min-width: 992px){
+    .profile-dropdown{
+         display: none;
+     }
+ }
