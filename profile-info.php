@@ -1,3 +1,50 @@
+<?php
+session_start();
+require 'DB_connection.php'; // Database connection
+
+// Check if user is logged in
+$user_id = $_SESSION['user_id'] ?? null;
+if (!$user_id) {
+    die("Error: User not logged in!");
+}
+
+// Fetch user details from `users` table
+$stmt = $conn->prepare("SELECT * FROM users WHERE user_id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+// Ensure `$user` is always set
+$user = $user ?? [];
+
+// Handle form submission (Update Profile)
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $first_name = $_POST['first_name'] ?? '';
+    $last_name = $_POST['last_name'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $username = $_POST['username'] ?? '';
+    $phone = $_POST['phone'] ?? '';
+    $address1 = $_POST['address1'] ?? '';
+    $address2 = $_POST['address2'] ?? '';
+    $role = $_POST['role'] ?? 'customer'; // Default role
+
+    // Update `users` table
+    $stmt = $conn->prepare("UPDATE users SET first_name=?, last_name=?, email=?, username=?, phone=?, address1=?, address2=?, role=? WHERE user_id=?");
+    $stmt->bind_param("ssssssssi", $first_name, $last_name, $email, $username, $phone, $address1, $address2, $role, $user_id);
+
+    if ($stmt->execute()) {
+        echo "<script>alert('Profile updated successfully!'); window.location.href='p2.php';</script>";
+    } else {
+        echo "<script>alert('Error updating profile: " . $stmt->error . "');</script>";
+    }
+
+    $stmt->close();
+}
+
+// Close database connection
+$conn->close();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -242,6 +289,7 @@
                 <img src="pic0.png" alt="Background Image"
                  class="img-fluid position-absolute w-50 m1"
                  style="bottom: 0; z-index: 20; padding-right: 50px; margin-top: -250px; margin-left:550px; transform: translateY(50px);">
+                 style="bottom: 0; z-index: 20; padding-right: 50px; margin-top: -250px; margin-left:550px; transform: translateY(75px);">
 
             </div>
    
