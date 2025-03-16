@@ -1,0 +1,53 @@
+/* Custom styles to enhance the Bootstrap theme */
+.table {
+    --bs-table-hover-bg: rgba(var(--bs-secondary-rgb), 0.2);
+}
+
+.btn-group {
+    display: flex;
+    gap: 0.3rem; /* Add space between buttons */
+}
+
+.btn-group .btn {
+    padding: 0.25rem 0.6rem;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-direction: column;
+        gap: 0.27rem; /* Keep small gap for mobile */
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+    }
+    
+    .table td, .table th {
+        white-space: nowrap;
+    }
+}
+
+/* Smooth hover transitions */
+.btn {
+    transition: all 0.1s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Enhanced table styles */
+.table-responsive {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(240, 122, 12, 0.582);
+}
+
