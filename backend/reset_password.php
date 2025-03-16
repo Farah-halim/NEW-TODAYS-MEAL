@@ -19,7 +19,8 @@ if (isset($_GET['token'])) {
             if (!empty($_POST['password'])) {
                 $newPassword = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
-                $update_sql = "UPDATE users SET password = '$newPassword', reset_token = NULL, reset_token_expiry = NULL WHERE email = '$email'";
+                $update_sql = " UPDATE users SET password = '$newPassword', reset_token = NULL, reset_token_expiry = NULL 
+                               WHERE email = '$email' ";
                 if (mysqli_query($conn, $update_sql)) {
                     echo "<script>
                         alert('✅ Password reset successfully!');
