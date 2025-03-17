@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         $emailData = mysqli_fetch_assoc($emailCheckResult);
 
         if ($emailData['count'] > 0) {
-            echo "<script>alert('خطأ: البريد الإلكتروني مستخدم بالفعل.'); window.location.href='profile-info.php';</script>";
+            echo "<script>alert('Error: Email is already in use.'); window.location.href='profile-info.php';</script>";
             exit();
         }
     }
@@ -57,45 +57,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $stmt = mysqli_prepare($conn, $update_query);
     mysqli_stmt_bind_param($stmt, "ssssssi", $new_name, $new_email, $new_phone, $new_address1, $new_address2, $new_gender, $user_id);
 
-    if (mysqli_stmt_execute($stmt)) {
-        $_SESSION['user_name'] = $new_name;
-        echo "<script>alert('تم تحديث الملف الشخصي بنجاح!'); window.location.href='profile-info.php';</script>";
-        exit();
-    } else {
-        echo "<script>alert('خطأ أثناء تحديث الملف الشخصي: " . mysqli_error($conn) . "');</script>";
-    }
-}
-
-// Handle password change
-if (isset($_POST['change_password'])) {
-    $current_password = $_POST['current_password'];
-    $new_password = $_POST['new_password'];
-    $confirm_password = $_POST['confirm_password'];
-
-    if (!password_verify($current_password, $stored_password)) {
-        echo "<script>alert('خطأ: كلمة المرور القديمة غير صحيحة!');</script>";
-    } elseif ($new_password !== $confirm_password) {
-        echo "<script>alert('خطأ: كلمة المرور الجديدة غير متطابقة!');</script>";
-    } elseif (strlen($new_password) < 6) {
-        echo "<script>alert('خطأ: يجب أن تحتوي كلمة المرور الجديدة على 6 أحرف على الأقل!');</script>";
-    } else {
-        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-        $update_password_query = "UPDATE users SET password = ? WHERE user_id = ?";
-        $stmt = mysqli_prepare($conn, $update_password_query);
-        mysqli_stmt_bind_param($stmt, "si", $hashed_password, $user_id);
-
         if (mysqli_stmt_execute($stmt)) {
-            echo "<script>alert('تم تغيير كلمة المرور بنجاح!'); window.location.href='profile-info.php';</script>";
+            $_SESSION['user_name'] = $new_name;
+            echo "<script>alert('Profile updated successfully!'); window.location.href='profile-info.php';</script>";
             exit();
         } else {
-            echo "<script>alert('خطأ أثناء تغيير كلمة المرور: " . mysqli_error($conn) . "');</script>";
+            echo "<script>alert('Error updating profile: " . mysqli_error($conn) . "');</script>";
         }
+    }
+  
+
+// Handle password change
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
+    $current_password = trim($_POST['current_password']);
+    $new_password = trim($_POST['new_password']);
+    $confirm_password = trim($_POST['confirm_password']);
+
+    if (password_verify($current_password, $stored_password)) {
+        if ($new_password === $confirm_password) {
+            if (strlen($new_password) < 3) {
+                echo "<script>alert('New password must be at least 3 characters!');</script>";
+            } else {
+                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                $update_password_query = "UPDATE users SET password = ? WHERE user_id = ?";
+                
+                $stmt = mysqli_prepare($conn, $update_password_query);
+                mysqli_stmt_bind_param($stmt, "si", $hashed_password, $user_id);
+
+                if (mysqli_stmt_execute($stmt)) {
+                    echo "<script>alert('Password changed successfully!');</script>";
+
+                    // Redirect based on user role
+                    if ($_SESSION['user_role'] === 'caterer') {
+                        echo "<script>window.location.href = 'caterer/home.php';</script>";
+                    } elseif ($_SESSION['user_role'] === 'customer') {
+                        echo "<script>window.location.href = 'customer/home.php';</script>";
+                    } else {
+                        echo "<script>window.location.href = 'profile-info.php';</script>";
+                    }
+                    exit();
+                } else {
+                    echo "<script>alert('Error updating password!');</script>";
+                }
+            }
+        } else {
+            echo "<script>alert('New passwords do not match!');</script>";
+        }
+    } else {
+        echo "<script>alert('Current password is incorrect!');</script>";
     }
 }
 
 mysqli_close($conn);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -164,68 +178,62 @@ mysqli_close($conn);
         </div>
 
         <div class="col-md-5 offset-md-1 p1">
-                    <h4 class="text-black d-flex align-items-center border-bottom" style="color: black;"> <span class="badge  me-2">2</span> Change Password</h4>
-                    <form>
-                        <div class="mb-3">
-                            <label class="text-black small fw-bold">Old Password <span class="required">*</span></label>
-                            <input type="password" class="form-control rounded-4 shadow-sm" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="text-black small fw-bold">New Password <span class="required">*</span></label>
-                            <div class="input-group">
-                                <input type="password" class="form-control rounded-4 shadow-sm" required>
-                                <span class="input-group-text toggle-password bg-transparent "><i class="fas fa-eye"></i></span>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="text-black small fw-bold">Confirm New Password <span class="required">*</span></label>
-                            <div class="input-group">
-                                <input type="password" class="form-control rounded-4 shadow-sm" required>
-                                <span class="input-group-text toggle-password bg-transparent"><i class="fas fa-eye-slash"></i></span>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn  w-100 rounded-pill shadow-sm" >
-                            <i class="fas fa-save text-custom"></i> <span class="text-custom text-decoration-underline text-left"> Save Changes </span>
-                        </button>
-                        
-                    </form>
+            <h4 class="text-black d-flex align-items-center border-bottom" style="color: black;">
+                <span class="badge me-2">2</span> Change Password </h4>
+                
+            <form method="POST" action="">
+                <div class="mb-3">
+                    <label class="text-black small fw-bold">Old Password <span class="required">*</span></label>
+                    <input type="password" name="current_password" id="current_password" class="form-control rounded-4 shadow-sm" required>
                 </div>
-
-                <div class="profile-image text-center mt-3">
-                    <img src="../../images/pic5.png" alt="Profile Image" class="img-fluid " >
-                 </div>
+        
+                <div class="mb-3">
+                    <label class="text-black small fw-bold">New Password <span class="required">*</span></label>
+                        <div class="input-group">
+                            <input type="password" name="new_password" id="new_password" class="form-control rounded-4 shadow-sm" required>
+                                <span class="input-group-text bg-transparent toggle-password" onclick="togglePassword('new_password', this)">
+                                    <i class="fas fa-eye"></i>
+                                </span>
+                        </div>
                 </div>
-                <img src="../../images/pic0.png" alt="Background Image"
-                 class="img-fluid position-absolute w-50 m1"
-                 style="bottom: 0; z-index: 10; padding-right: 50px; margin-top: -250px; margin-left:540px; transform: translateY(170px);">
-
-            </div>
-   
-
-           <!-- <img src="picture0.png" alt="Background Image"
-             class="img-fluid position-relative w-50"
-             style="bottom: 0; z-index: 20; padding-right: 50px; margin-top: -300px; margin-left:650px">-->
-<script>
-
-         document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll(".dropdown-btn").forEach(button => {
-                 button.addEventListener("click", function() {
-                    let dropdown = this.nextElementSibling;
-                    let isOpen = dropdown.style.display === "block";
-                    document.querySelectorAll(".dropdown-content").forEach(content => content.style.display = "none");
-                    dropdown.style.display = isOpen ? "none" : "block";
-                });
-             });
-          });
-
-         </script>
-            </div>
-        </div>
+        
+                <div class="mb-3">
+                    <label class="text-black small fw-bold">Confirm New Password <span class="required">*</span></label>
+                        <div class="input-group">
+                            <input type="password" name="confirm_password" id="confirm_password" class="form-control rounded-4 shadow-sm" required>
+                                <span class="input-group-text bg-transparent toggle-password" onclick="togglePassword('confirm_password', this)">
+                                    <i class="fas fa-eye-slash"></i>
+                                </span>
+                        </div>
+                </div>
+                
+                <button type="submit" name="change_password" class="btn w-100 rounded-pill shadow-sm">
+                    <i class="fas fa-save text-custom"></i> 
+                    <span class="text-custom text-decoration-underline text-left"> Save Changes </span>
+                </button>
+            </form>
         </div>
     </div>
+    
+    <img src="../../images/pic0.png" alt="Background Image" class="img-fluid position-absolute"
+    style="width: 40%; max-width: 500px; bottom: 0; z-index: 10; padding-right: 50px; margin-top: -260px; margin-left: 540px; transform: translateY(120px);">
+</div>
+<!-- <img src="picture0.png" alt="Background Image" class="img-fluid position-relative w-50"
+style="bottom: 0; z-index: 20; padding-right: 50px; margin-top: -300px; margin-left:650px">-->
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".dropdown-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            let dropdown = this.nextElementSibling;
+            let isOpen = dropdown.style.display === "block";
+            document.querySelectorAll(".dropdown-content").forEach(content => content.style.display = "none");
+            dropdown.style.display = isOpen ? "none" : "block";
+        });
+    });
+});
+</script>
 </main>
-
 <?php include '../footer.php'; ?>
-
 </body>
 </html>
