@@ -31,7 +31,7 @@ if (isset($_POST['submit'])) {
                         header("Location: caterer/home.php");
                         exit();} 
                     else {
-                        header("Location: customer/home.php"); 
+                        header("Location: customer/profile-info.php"); 
                         exit();}
                 }} 
             else {

@@ -12,7 +12,7 @@
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="meal.css">
+    <link rel="stylesheet" href="../../frontend/css/meal.css">
     <style>
         body {
             
@@ -47,7 +47,7 @@
             color: white;
             padding: 10px 20px;
             width: 100%;
-            font-size: 18px;
+            font-size: 17px;
             border-radius: 5px;
             cursor: pointer;
         }
@@ -104,7 +104,7 @@
     </style>
 </head>
 <body>
-    <?php include 'nav3.php'; ?>
+    <?php include '../nav3.php'; ?>
     <div class="container-fluid">
         <div class="row">
             <?php include 'sidebar-profile.php'; ?>
@@ -138,13 +138,13 @@
                             <button class="btn btn-primary w-100 rounded-pill shadow-sm">Confirm Payment</button>
                         </form>
                     </div>
-                    <img src="deliver.png" alt="Background Image" class="img-fluid background-image" style="z-index: 10; margin-top: 20px;">
+                    <img src="../../images/deliver.png" alt="Background Image" class="img-fluid background-image" style="z-index: 10; margin-top: 20px;">
                 </div>
             </main>
         </div>
     </div>
     
-    <?php include 'footer.php'; ?>
+    <?php include '../footer.php'; ?>
     
     <script>
         $(document).ready(function() {

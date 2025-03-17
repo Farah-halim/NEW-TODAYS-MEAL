@@ -1,7 +1,7 @@
 <head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="meal.css">
+    <link rel="stylesheet" href="../../frontend/css/meal.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 
@@ -22,4 +22,3 @@
                 <button class="btn-light logout-btn  rounded-pill px-3 py-1 shadow-sm border-0 " ><i class="fas fa-power-off me-2"></i>Log Out</button>
             </div>
         </aside>
-
