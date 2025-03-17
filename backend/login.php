@@ -19,8 +19,11 @@ if (isset($_POST['submit'])) {
             $user = mysqli_fetch_assoc($result);
 
             if (password_verify($password, $user['password'])) {
-                if ($user['role'] === 'caterer' && $user['is_approved'] == 0) {
-                    echo "Your account is under review. Please wait for admin approval.";
+                if (($user['role'] === 'caterer' || $user['role'] === 'delivery') && $user['is_approved'] == 0) {
+                    echo '<div class="alert alert-info text-center" style="max-width: 400px; margin: 20px auto; padding: 15px; border-radius: 8px; background-color: #e1f5fe; color: #01579b;">
+                            <i class="fas fa-clock" style="font-size: 24px; margin-bottom: 10px;"></i>
+                            <p style="margin: 0;">Your account is under review. Please wait for admin approval.</p>
+                          </div>';
                 } 
                 else {
                     $_SESSION['user_id'] = $user['user_id'];
