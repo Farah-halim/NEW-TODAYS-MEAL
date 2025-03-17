@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 16, 2025 at 10:55 PM
+-- Generation Time: Mar 17, 2025 at 04:52 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -113,19 +113,22 @@ CREATE TABLE `users` (
   `is_approved` tinyint(1) NOT NULL,
   `address2` varchar(65) DEFAULT NULL,
   `national_id` varchar(14) DEFAULT NULL,
-  `years_of_experience` enum('No Experience','Beginner (0-1 years)','Intermediate (2-3 years)','Advanced (4-5 years)','Expert (6+ years)') DEFAULT NULL,
-  `driver_license` varchar(14) DEFAULT NULL
+  `driver_license` varchar(14) DEFAULT NULL,
+  `years_of_experience` enum('No Experience','Beginner (0-1 years)','Intermediate (2-3 years)','Advanced (4-5 years)','Expert (6+ years)') NOT NULL,
+  `category_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`user_id`, `name`, `email`, `password`, `reset_token`, `reset_token_expiry`, `phone`, `address1`, `role`, `created_at`, `is_approved`, `address2`, `national_id`, `years_of_experience`, `driver_license`) VALUES
-(13, 'admin1', 'admin1@gmail.com', '$2y$10$vO6Yg9u6k394LVW1lQnJkOI1YrxTMCtU82EYpbdJU3c7AvRMMC4Vy', NULL, NULL, 1234, 'mohamed st', 'admin', '2025-02-27 09:39:59', 1, '', NULL, NULL, NULL),
-(26, 'customer', 'customer@gmail.com', '$2y$10$LDcb/hKusDVeuDkBq4vQTud.uxyEf7a7YfKQ4PfRvMuhBv2hzRNbW', NULL, NULL, 838383838, 'w', 'customer', '2025-02-27 12:16:03', 1, '', NULL, NULL, NULL),
-(27, 'caterer1', 'caterer1@gmail.com', '$2y$10$j7rl9BgjxWt9KP2/Rvg60eRypWRJSbg4wHnJWrePWBXD6Yl2nyiue', NULL, NULL, 333333333, 'abo gafer st', 'caterer', '2025-02-27 12:17:29', 1, '', NULL, NULL, NULL),
-(29, 'Farah halim', 'level2bis2@gmail.com', '$2y$10$3i3mwdSGs/eOFqbwFXh2ceABkof.f6sgSynPNCteEkXsZ7LsIjdkK', '6f5413a7700719686958e829c1e0d0d4bc7df0caf48e78ee09f7ac241734a003', '2025-03-14 23:56:18', 2147483647, 'nabil khattab st', 'customer', '2025-03-11 15:03:16', 1, '', NULL, NULL, NULL);
+INSERT INTO `users` (`user_id`, `name`, `email`, `password`, `reset_token`, `reset_token_expiry`, `phone`, `address1`, `role`, `created_at`, `is_approved`, `address2`, `national_id`, `driver_license`, `years_of_experience`, `category_id`) VALUES
+(13, 'admin1', 'admin1@gmail.com', '$2y$10$vO6Yg9u6k394LVW1lQnJkOI1YrxTMCtU82EYpbdJU3c7AvRMMC4Vy', NULL, NULL, 1234, 'mohamed st', 'admin', '2025-02-27 09:39:59', 1, '', NULL, NULL, 'No Experience', NULL),
+(26, 'customer', 'customer@gmail.com', '$2y$10$LDcb/hKusDVeuDkBq4vQTud.uxyEf7a7YfKQ4PfRvMuhBv2hzRNbW', NULL, NULL, 838383838, 'w', 'customer', '2025-02-27 12:16:03', 1, '', NULL, NULL, 'No Experience', NULL),
+(27, 'caterer1', 'caterer1@gmail.com', '$2y$10$j7rl9BgjxWt9KP2/Rvg60eRypWRJSbg4wHnJWrePWBXD6Yl2nyiue', NULL, NULL, 333333333, 'abo gafer st', 'caterer', '2025-02-27 12:17:29', 1, '', NULL, NULL, 'No Experience', NULL),
+(29, 'Farah halim', 'level2bis2@gmail.com', '$2y$10$3i3mwdSGs/eOFqbwFXh2ceABkof.f6sgSynPNCteEkXsZ7LsIjdkK', '6f5413a7700719686958e829c1e0d0d4bc7df0caf48e78ee09f7ac241734a003', '2025-03-14 23:56:18', 2147483647, 'nabil khattab st', 'customer', '2025-03-11 15:03:16', 1, '', NULL, NULL, 'No Experience', NULL),
+(41, 'Esraa Yasser', 'esraayasser809@gmail.com', '$2y$10$UwPKfzvt1ePRQkSs3CJS3OS5GJbEiTJQ9YDzQvUKY7CnpiVl/Nq7G', NULL, NULL, 1006457530, 'الهرم - الجيزة', 'customer', '2025-03-17 03:28:07', 1, NULL, NULL, NULL, 'No Experience', NULL),
+(42, 'hend', 'mauricefanning1@gmail.com', '$2y$10$KsVHDkXawdzHfC53NEDc4ugwjIXF5ekt6tVPAOYsT08p70IiJQjmS', NULL, NULL, 919579318, 'الهرم - الجيزة', 'caterer', '2025-03-17 03:29:02', 0, NULL, '300000', NULL, 'No Experience', NULL);
 
 --
 -- Indexes for dumped tables
@@ -157,7 +160,8 @@ ALTER TABLE `food_categories`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `fk_category` (`category_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -179,7 +183,7 @@ ALTER TABLE `food`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- Constraints for dumped tables
@@ -197,6 +201,12 @@ ALTER TABLE `food`
 ALTER TABLE `food_categories`
   ADD CONSTRAINT `food_categories_ibfk_1` FOREIGN KEY (`food_id`) REFERENCES `food` (`food_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `food_categories_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `fk_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

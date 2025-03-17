@@ -22,9 +22,9 @@
         $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
         
         // Get user role based on form data
-        if (isset($_POST['experience']) && !empty($_POST['experience'])) {
+        if (isset($_POST['experience_level']) && !empty($_POST['experience_level'])) {
             $role = 'caterer';
-            $experience = mysqli_real_escape_string($conn, $_POST['experience']);
+            $experience = mysqli_real_escape_string($conn, $_POST['experience_level']);
             $national_id = mysqli_real_escape_string($conn, $_POST['national_id']);
         } elseif (isset($_POST['delivery_national_id']) && !empty($_POST['delivery_national_id'])) {
             $role = 'delivery';
@@ -43,8 +43,9 @@
         } else {
             // Base query for all users
             if ($role == 'caterer') {
-                $sql = "INSERT INTO users (name, email, password, phone, address1, role, is_approved, national_id, years_of_experience) 
-                       VALUES ('$name', '$email', '$password', '$phone', '$address', '$role', 0, '$national_id', '$experience')";
+                $category_id = mysqli_real_escape_string($conn, $_POST['category']);
+                $sql = "INSERT INTO users (name, email, password, phone, address1, role, is_approved, national_id, years_of_experience, category_id) 
+                       VALUES ('$name', '$email', '$password', '$phone', '$address', '$role', 0, '$national_id', '$experience', '$category_id')";
             } elseif ($role == 'delivery') {
                 $sql = "INSERT INTO users (name, email, password, phone, address1, role, is_approved, national_id, driver_license) 
                        VALUES ('$name', '$email', '$password', '$phone', '$address', '$role', 0, '$national_id', '$driver_license')";
@@ -101,24 +102,25 @@
                 <!-- Caterer Fields -->
                 <div id="caterer-fields" class="hidden">
                     <label>Years of Experience</label>
-                    <select name="experience" class="styled-select" required>
+                    <select name="experience_level" class="styled-select" required>
                         <option value="" disabled selected>Select your experience level</option>
                         <option value="No Experience">No Experience</option>
-                        <option value="Beginner">Beginner (0-1 years)</option>
-                        <option value="Intermediate">Intermediate (2-3 years)</option>
-                        <option value="Advanced">Advanced (4-5 years)</option>
-                        <option value="Expert">Expert (6+ years)</option>
+                        <option value="Beginner (0-1 years)">Beginner (0-1 years)</option>
+                        <option value="Intermediate (2-3 years)">Intermediate (2-3 years)</option>
+                        <option value="Advanced (4-5 years)">Advanced (4-5 years)</option>
+                        <option value="Expert (6+ years)">Expert (6+ years)</option>
                     </select>
 
                     <label>Category of Food</label>
                     <select name="category" class="styled-select" required>
                         <option value="" disabled selected>Select food category</option>
-                        <option value="Desserts">Desserts</option>
-                        <option value="Drinks">Drinks</option>
-                        <option value="Fast Food">Fast Food</option>
-                        <option value="Italian">Italian</option>
-                        <option value="Seafood">Seafood</option>
-                        <option value="Vegetarian">Vegetarian</option>
+                        <?php
+                        $category_query = "SELECT category_id, category_name FROM categories";
+                        $category_result = $conn->query($category_query);
+                        while($category = $category_result->fetch_assoc()) {
+                            echo "<option value='" . $category['category_id'] . "'>" . htmlspecialchars($category['category_name']) . "</option>";
+                        }
+                        ?>
                     </select>
 
                     <label>National ID Number</label>
