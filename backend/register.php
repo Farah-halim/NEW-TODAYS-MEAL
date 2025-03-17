@@ -10,7 +10,61 @@
 </head>
     <body>
 
-    <?php include 'nav3.php'; ?>
+    <?php 
+    include '../DB_connection.php';
+    include 'nav3.php';
+
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $name = mysqli_real_escape_string($conn, $_POST['name']);
+        $email = mysqli_real_escape_string($conn, $_POST['email']);
+        $phone = mysqli_real_escape_string($conn, $_POST['phone']);
+        $address = mysqli_real_escape_string($conn, $_POST['customer_address']);
+        $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+        
+        // Get user role based on form data
+        if (isset($_POST['experience']) && !empty($_POST['experience'])) {
+            $role = 'caterer';
+            $experience = mysqli_real_escape_string($conn, $_POST['experience']);
+            $national_id = mysqli_real_escape_string($conn, $_POST['national_id']);
+        } elseif (isset($_POST['delivery_national_id']) && !empty($_POST['delivery_national_id'])) {
+            $role = 'delivery';
+            $national_id = mysqli_real_escape_string($conn, $_POST['delivery_national_id']);
+            $driver_license = mysqli_real_escape_string($conn, $_POST['license_number']);
+        } else {
+            $role = 'customer';
+        }
+
+        // Check if email already exists
+        $check_email = "SELECT email FROM users WHERE email = '$email'";
+        $result = mysqli_query($conn, $check_email);
+        
+        if (mysqli_num_rows($result) > 0) {
+            echo "<script>alert('Email already exists!');</script>";
+        } else {
+            // Base query for all users
+            if ($role == 'caterer') {
+                $sql = "INSERT INTO users (name, email, password, phone, address1, role, is_approved, national_id, years_of_experience) 
+                       VALUES ('$name', '$email', '$password', '$phone', '$address', '$role', 0, '$national_id', '$experience')";
+            } elseif ($role == 'delivery') {
+                $sql = "INSERT INTO users (name, email, password, phone, address1, role, is_approved, national_id, driver_license) 
+                       VALUES ('$name', '$email', '$password', '$phone', '$address', '$role', 0, '$national_id', '$driver_license')";
+            } else {
+                $sql = "INSERT INTO users (name, email, password, phone, address1, role, is_approved) 
+                       VALUES ('$name', '$email', '$password', '$phone', '$address', '$role', 1)";
+            }
+
+            if (mysqli_query($conn, $sql)) {
+                if ($role == 'caterer' || $role == 'delivery') {
+                    echo "<script>alert('Registration successful! Please wait for admin approval.'); window.location.href='login.php';</script>";
+                } else {
+                    echo "<script>alert('Registration successful!'); window.location.href='login.php';</script>";
+                }
+            } else {
+                echo "<script>alert('Error: " . mysqli_error($conn) . "');</script>";
+            }
+        }
+    }
+    ?>
 
     <main>
         <section class="left-section">
