@@ -20,11 +20,34 @@ if (isset($_POST['submit'])) {
 
             if (password_verify($password, $user['password'])) {
                 if (($user['role'] === 'caterer' || $user['role'] === 'delivery') && $user['is_approved'] == 0) {
-                    echo '<div class="alert alert-info text-center" style="max-width: 400px; margin: 20px auto; padding: 15px; border-radius: 8px; background-color: #e1f5fe; color: #01579b;">
-                            <i class="fas fa-clock" style="font-size: 24px; margin-bottom: 10px;"></i>
-                            <p style="margin: 0;">Your account is under review. Please wait for admin approval.</p>
-                          </div>';
-                } 
+                    echo '<div id="approvalAlert" class="alert alert-info text-center" style="
+                            max-width: 400px; 
+                            margin: 20px auto; 
+                            padding: 15px; 
+                            border-radius: 8px; 
+                            background-color: #e1f5fe; 
+                            color: #01579b;
+                            position: fixed;
+                            top: 20px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            z-index: 9999; 
+                        ">
+                            <i class="fas fa-clock" style="font-size: 24px;"></i>
+                            <p style="margin: 0; flex: 1;">Your account is under review. Please wait for admin approval.</p>
+                            <button onclick="document.getElementById(\'approvalAlert\').style.display=\'none\'" style="
+                                background: none;
+                                border: none;
+                                font-size: 18px;
+                                cursor: pointer;
+                                color: #01579b;
+                            ">&times;</button>
+                        </div>';
+                }
                 else {
                     $_SESSION['user_id'] = $user['user_id'];
                     $_SESSION['user_name'] = $user['name'];
@@ -32,6 +55,9 @@ if (isset($_POST['submit'])) {
                 
                     if ($_SESSION['user_role'] === 'caterer') {
                         header("Location: caterer/home.php");
+                        exit();} 
+                    elseif ($_SESSION['user_role'] === 'delivery'){
+                        header("Location: delivery/index.php");
                         exit();} 
                     else {
                         header("Location: customer/profile-info.php"); 

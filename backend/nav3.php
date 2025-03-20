@@ -61,7 +61,7 @@
 <nav class="navbar navbar-light  shadow-sm px-4">
     <div class="container-fluid d-flex align-items-center justify-content-between flex-wrap">
         <a class="navbar-brand d-flex align-items-center" href="#">
-            <img src="../../images/logo.png" alt="Logo" height="55" style="margin-right: 10px;">
+            <img src="../images/logo.png" alt="Logo" height="55" style="margin-right: 10px;">
             <span class="ms-2 text-white fs-5 fw-bold fst-italic">Today's Meal</span>
         </a>
         <div class="input-group me-3 flex-grow-1 my-3 my-lg-0" style="flex: 0 1 100px;">

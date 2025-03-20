@@ -19,9 +19,11 @@ if (isset($_POST['decline'])) {
     mysqli_query($conn, $sql);
 }
 
-$sql = "SELECT user_id, name, email, created_at 
-FROM users 
-WHERE role = 'caterer' AND is_approved = 0";
+$sql = "SELECT user_id, name, email, created_at, role 
+        FROM users 
+        WHERE (role = 'caterer' OR role = 'delivery') 
+        AND is_approved = 0";
+
 $result = mysqli_query($conn, $sql);
 ?>
 
@@ -49,7 +51,7 @@ $result = mysqli_query($conn, $sql);
         <div class="row">
             <div class="col">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2>Pending Caterer Requests</h2>
+                    <h2>Pending Requests</h2>
                     <div class="badge bg-primary rounded-pill">
                         <?php echo mysqli_num_rows($result); ?> Pending
                     </div>
@@ -63,6 +65,7 @@ $result = mysqli_query($conn, $sql);
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Registration Date</th>
+                                <th> Role </th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -73,7 +76,8 @@ $result = mysqli_query($conn, $sql);
                                     <td>#<?= str_pad($row['user_id'], 3, '0', STR_PAD_LEFT); ?></td>
                                     <td><?= htmlspecialchars($row['name']); ?></td>
                                     <td><?= htmlspecialchars($row['email']); ?></td>
-                                    <td><?= date('Y-m-d', strtotime($row['created_at'])); ?></td> 
+                                    <td><?= date('Y-m-d', strtotime($row['created_at'])); ?></td>
+                                    <td><?= htmlspecialchars($row['role']); ?></td> 
                                     <td><span class="badge bg-warning">Pending</span></td> 
                                     <td>
                                         <div class="btn-group" role="group">
