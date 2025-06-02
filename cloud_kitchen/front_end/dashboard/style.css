@@ -1,0 +1,268 @@
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap');
+
+body {
+  font-family: "Inter", Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 1343px;
+  margin: 0 auto;
+  background-color: #f5e0c1d1;
+}
+
+.main-content {
+  padding: 39px 57px;
+  background-color: #f7e6cc;
+}
+
+/* ========== Stats Grid ========== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background-color: #fdfcf7;
+  border-radius: 8px;
+  padding: 26px;
+  box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1),
+              0px 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.stat-label {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 20.4px;
+  margin: 0;
+}
+
+.stat-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #2a41201a;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.stat-icon.revenue {
+  background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-14.svg);
+}
+
+.stat-icon.orders {
+  background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-1.svg);
+}
+
+.stat-icon.stock {
+  background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-2.svg);
+  background-color: #fee2e2;
+}
+
+.stat-footer {
+  display: flex;
+  align-items: center;
+  font-size: 11.9px;
+  padding-right: 2px;
+}
+
+.stat-change {
+  color: #16a34a;
+}
+
+.stat-detail {
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+}
+
+.stat-detail img {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+}
+
+.stat-detail.completed {
+  color: #16a34a;
+}
+
+.stat-detail.pending {
+  color: #ea580c;
+}
+
+.view-link {
+  color: #2563eb;
+  text-decoration: none;
+  margin-left: 5px;
+}
+
+.view-link:hover,
+.view-all:hover {
+  text-decoration: underline;
+}
+
+/* ========== Orders Section ========== */
+.orders-section {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1),
+              0px 4px 6px -4px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  overflow-x: auto;
+}
+
+.orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+.orders-title {
+  color: #6a4125;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  font-family: "Comic Sans MS", cursive;
+}
+
+.view-all {
+  display: flex;
+  align-items: center;
+  color: #345028;
+  font-size: 16px;
+  text-decoration: none;
+}
+
+.view-all img {
+  width: 17px;
+  height: 17px;
+  margin-left: 4px;
+}
+
+.orders-table {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.orders-table th {
+  background-color: #ca7428;
+  color: #ffffff;
+  text-align: left;
+  padding: 12px;
+}
+
+.orders-table td {
+  padding: 18px 12px;
+  font-size: 11.9px;
+  color: #4b5563;
+  border-top: 1px solid #e5e7eb;
+}
+
+.orders-table tr:first-child td {
+  border-top: none;
+}
+
+.order-type,
+.order-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 11.9px;
+}
+
+.order-type.normal {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.order-type.scheduled {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+}
+
+.order-status.completed {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.order-status.preparing {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.order-status.pending {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.order-status.ready {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* ========== Responsive Media Queries ========== */
+@media (max-width: 768px) {
+  .orders-title {
+    font-size: 20px;
+  }
+
+  .view-all {
+    font-size: 14px;
+  }
+
+  .orders-table {
+    min-width: 100%;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .orders-table th,
+  .orders-table td {
+    font-size: 10px;
+    padding: 12px 8px;
+  }
+
+  .order-type, .order-status {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 400px) {
+  .orders-title {
+    font-size: 17px;
+  }
+
+  .view-all {
+    font-size: 12px;
+  }
+
+  .orders-table th,
+  .orders-table td {
+    font-size: 9px;
+    padding: 9px 6px;
+  }
+
+  .order-type, .order-status {
+    font-size: 8px;
+  }
+}

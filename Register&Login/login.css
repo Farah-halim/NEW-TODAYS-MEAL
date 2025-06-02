@@ -1,0 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f8f5ee;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.login {
+  display: flex;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  width: 896px; /* Default width */
+  height: 424px; /* Default height */
+}
+
+.image-container {
+  width: 448px; /* Image container width */
+  height: 100%; /* Ensure full height relative to parent */
+  background: url(https://c.animaapp.com/m8wc2r2rX76fAn/img/image.png) center/cover;
+}
+
+.form-container {
+  width: 448px; /* Form container width */
+  padding: 32px; /* Padding for form */
+  height: 100%; /* Ensure full height relative to parent */
+}
+
+h1 {
+  color: #8b4513; /* Heading color */
+  font-size: 20.4px; /* Heading size */
+  text-align: center; /* Center heading */
+  margin-bottom: 24px; /* Space below heading */
+}
+
+.input-group {
+  margin-bottom: 16px; /* Spacing between input groups */
+}
+
+label {
+  display: block;
+  color: #374151; /* Label color */
+  font-size: 11.9px; /* Label font size */
+  font-weight: 500; /* Label font weight */
+  margin-bottom: 4px; /* Space below label */
+}
+
+.required{
+    color: #ef4444; /* Highlight required fields */
+
+}
+.input-wrapper {
+  position: relative; /* Position for icon */
+}
+
+.input-wrapper svg {
+  position: absolute; /* Absolute positioning for icon */
+  top: 50%; /* Center vertically */
+  transform: translateY(-50%); /* Adjust vertical position */
+  left: 12px; /* Space from the left */
+  width: 20px; /* Icon width */
+  height: 20px; /* Icon height */
+  pointer-events: none; /* Disable pointer events on icon */
+}
+
+input[type="email"],
+input[type="password"] {
+  width: 90%; /* Input width */
+  padding: 12px 12px 12px 40px; /* Padding for inputs */
+  border: 1px solid #d1d5db; /* Input border */
+  border-radius: 6px; /* Rounded corners */
+  font-size: 14px; /* Input font size */
+  color: #374151; /* Input text color */
+}
+
+input::placeholder {
+  color: #9ca3af; /* Placeholder text color */
+}
+
+button {
+  width: 90%; /* Button width */
+  padding: 8px; /* Button padding */
+  background-color: #8b4513; /* Button background color */
+  color: #fff; /* Button text color */
+  border: none; /* No border */
+  border-radius: 6px; /* Rounded corners */
+  font-size: 13.6px; /* Button font size */
+  cursor: pointer; /* Pointer cursor for button */
+}
+
+.options {
+  display: flex; /* Use flexbox for options */
+  justify-content: space-between; /* Align option items */
+  margin-bottom: 24px; /* Space below options */
+  font-size: 10px; /* Smaller font size for options */
+}
+
+.forgot-password {
+  margin-top: 4px; /* Space below checkbox */
+  color: #8b4513; /* Color for forgot password link */
+}
+
+.signup {
+  text-align: center; /* Center text for signup */
+  margin-top: 32px; /* Space above */
+  font-size: 12px; /* Signup text font size */
+}
+
+.signup a {
+  color: #8b4513; /* Signup link color */
+  text-decoration: none; /* No underline */
+}
+
+a:hover {
+  text-decoration: underline; /* Underline on hover */
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .login {
+    flex-direction: row; /* Keep image on the left and form on right */
+    width: 100%; /* Allow full width on mobile */
+    height: auto; /* Automatically adjust height */
+  }
+
+  .image-container {
+    width: 45%; /* Image container width */
+    height: auto; /* Keep height proportional */
+  }
+
+  .form-container {
+    width: 55%; /* Form container width */
+    padding: 20px; /* Maintain padding */
+  }
+
+  h1 {
+    font-size: 18px; /* Smaller heading size */
+    margin-bottom: 16px; /* Adjust margin */
+  }
+
+  label {
+    font-size: 10px; /* Smaller font size for labels */
+  }
+
+  input[type="email"],
+  input[type="password"] {
+    width: 90%; /* Input fields at 90% width */
+    padding: 12px 12px 12px 40px; /* Maintain padding */
+    font-size: 14px; /* Font size for inputs */
+  }
+
+  button {
+    width: 90%; /* Button width */
+    font-size: 12px; /* Smaller button font size */
+  }
+
+  .options {
+    flex-direction: column; /* Stack items in a column */
+    align-items: flex-start; /* Align to the start for a neat column layout */
+    margin-bottom: 16px; /* Adjust spacing below */
+  }
+
+  .forgot-password {
+    margin-top: 8px; /* Space above forgot password link */
+    width: 100%; /* Optional: make it full width */
+    font-size: 9px; /* Smaller font size for forgot password link */
+  }
+
+  .remember-me {
+    margin-bottom: 8px; /* Space below checkbox */
+  }
+}
+
+/* New styles for 425px breakpoint */
+@media (max-width: 425px) {
+  .image-container {
+    height: auto; /* Set height for image on smaller screens */
+  }
+
+  .form-container {
+    height: auto; /* Adjust height for form */
+  }
+
+  h1 {
+    font-size: 16px; /* Further reduce heading size for smaller screens */
+  }
+}
