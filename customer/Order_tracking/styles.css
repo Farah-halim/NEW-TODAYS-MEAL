@@ -465,6 +465,7 @@ body {
   flex-direction:column}
 
 .items-toggle {
+      text-decoration: none;
   background:none;
   border:none;
   color:#8f5936;
@@ -988,6 +989,7 @@ body {
   margin-left:auto}
 
 .status-wrap .items-toggle {
+  text-decoration: none;
   background:none;
   border:none;
   color:#8f5936;
