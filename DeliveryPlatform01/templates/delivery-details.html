@@ -1,0 +1,310 @@
+
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('delivery_list') }}" class="btn btn-outline-light btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Back to Deliveries
+    </a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h3">Delivery #{{ delivery.id }}</h1>
+        <p class="text-muted">
+            <i class="fas fa-calendar me-1"></i> {{ format_datetime(delivery.scheduled_time) }}
+        </p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <span class="badge {{ get_status_class(delivery.status) }} fs-6 mb-2">
+            {{ delivery.status.capitalize() }}
+        </span>
+        
+        <div class="btn-group">
+            {% if delivery.status == 'pending' %}
+            <button type="button" class="btn btn-primary update-status" data-id="{{ delivery.id }}" data-status="in-progress">
+                <i class="fas fa-truck me-1"></i> Start Delivery
+            </button>
+            {% elif delivery.status == 'in-progress' %}
+            <button type="button" class="btn btn-success update-status" data-id="{{ delivery.id }}" data-status="completed">
+                <i class="fas fa-check me-1"></i> Mark as Delivered
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column - Delivery Info -->
+    <div class="col-lg-8">
+        <!-- Delivery Map -->
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Delivery Route</h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="deliveryRouteMap" style="height: 400px;"></div>
+            </div>
+            <div class="card-footer bg-dark">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <span class="badge bg-primary p-2">A</span>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Pickup Location</h6>
+                                <p class="mb-0 small text-muted">{{ delivery.provider_address }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <span class="badge bg-success p-2">B</span>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Delivery Location</h6>
+                                <p class="mb-0 small text-muted">{{ delivery.customer_address }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Items -->
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Order Items</h5>
+            </div>
+            <div class="card-body">
+                {% if order_items|length == 0 %}
+                <p class="text-center text-muted">No items found for this order</p>
+                {% else %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order_items %}
+                            <tr>
+                                <td>
+                                    <div>{{ item.meal_name }}</div>
+                                    <small class="text-muted">{{ item.meal_description }}</small>
+                                </td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ item.special_instructions if item.special_instructions else '<span class="text-muted">No special instructions</span>'|safe }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Delivery Timeline -->
+        <div class="card border-0">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Delivery Timeline</h5>
+            </div>
+            <div class="card-body">
+                <ul class="timeline">
+                    <li class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h5 class="timeline-title">Order Placed</h5>
+                            <p class="timeline-text">
+                                <i class="fas fa-calendar me-1"></i> {{ format_datetime(delivery.created_at) }}
+                            </p>
+                        </div>
+                    </li>
+                    <li class="timeline-item">
+                        <div class="timeline-marker {{ 'bg-success' if delivery.status in ['pending', 'in-progress', 'completed'] else 'bg-secondary' }}"></div>
+                        <div class="timeline-content">
+                            <h5 class="timeline-title">Pickup Ready</h5>
+                            <p class="timeline-text">
+                                <i class="fas fa-calendar me-1"></i> {{ format_datetime(delivery.scheduled_time) }}
+                            </p>
+                        </div>
+                    </li>
+                    <li class="timeline-item">
+                        <div class="timeline-marker {{ 'bg-success' if delivery.status in ['in-progress', 'completed'] else 'bg-secondary' }}"></div>
+                        <div class="timeline-content">
+                            <h5 class="timeline-title">In Transit</h5>
+                            <p class="timeline-text">
+                                {% if delivery.status in ['in-progress', 'completed'] and delivery.pickup_time %}
+                                <i class="fas fa-calendar me-1"></i> {{ format_datetime(delivery.pickup_time) }}
+                                {% else %}
+                                <span class="text-muted">Not started yet</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </li>
+                    <li class="timeline-item">
+                        <div class="timeline-marker {{ 'bg-success' if delivery.status == 'completed' else 'bg-secondary' }}"></div>
+                        <div class="timeline-content">
+                            <h5 class="timeline-title">Delivered</h5>
+                            <p class="timeline-text">
+                                {% if delivery.status == 'completed' and delivery.delivery_time %}
+                                <i class="fas fa-calendar me-1"></i> {{ format_datetime(delivery.delivery_time) }}
+                                {% else %}
+                                <span class="text-muted">Not delivered yet</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column - Customer Info and Delivery Details -->
+    <div class="col-lg-4">
+        <!-- Delivery Info Card -->
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Delivery Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-route me-2"></i> Estimated Distance
+                    </div>
+                    <p class="mb-0 fs-5">{{ distance }} km</p>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-clock me-2"></i> Estimated Time
+                    </div>
+                    <p class="mb-0 fs-5">{{ estimated_time }} minutes</p>
+                </div>
+                
+                <div>
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-calendar-alt me-2"></i> Scheduled For
+                    </div>
+                    <p class="mb-0 fs-5">{{ format_datetime(delivery.scheduled_time) }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customer Info Card -->
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Customer Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-user me-2"></i> Customer Name
+                    </div>
+                    <p class="mb-0 fs-5">{{ delivery.customer_name }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-phone me-2"></i> Phone Number
+                    </div>
+                    <p class="mb-0 fs-5">
+                        <a href="tel:{{ delivery.customer_phone }}" class="text-white text-decoration-none">
+                            {{ delivery.customer_phone }}
+                        </a>
+                    </p>
+                </div>
+                
+                <div>
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-map-marker-alt me-2"></i> Delivery Address
+                    </div>
+                    <p class="mb-0 fs-5">{{ delivery.customer_address }}</p>
+                </div>
+            </div>
+            <div class="card-footer bg-dark">
+                <a href="tel:{{ delivery.customer_phone }}" class="btn btn-primary w-100">
+                    <i class="fas fa-phone me-2"></i> Call Customer
+                </a>
+            </div>
+        </div>
+        
+        <!-- Restaurant Info Card -->
+        <div class="card border-0">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Pickup Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-store me-2"></i> Restaurant Name
+                    </div>
+                    <p class="mb-0 fs-5">{{ delivery.provider_name }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-phone me-2"></i> Phone Number
+                    </div>
+                    <p class="mb-0 fs-5">
+                        <a href="tel:{{ delivery.provider_phone }}" class="text-white text-decoration-none">
+                            {{ delivery.provider_phone }}
+                        </a>
+                    </p>
+                </div>
+                
+                <div>
+                    <div class="badge bg-primary bg-opacity-10 text-primary mb-2 w-100 text-start p-2">
+                        <i class="fas fa-map-marker-alt me-2"></i> Pickup Address
+                    </div>
+                    <p class="mb-0 fs-5">{{ delivery.provider_address }}</p>
+                </div>
+            </div>
+            <div class="card-footer bg-dark">
+                <a href="tel:{{ delivery.provider_phone }}" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-phone me-2"></i> Call Restaurant
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden inputs for map initialization -->
+<input type="hidden" id="deliveryId" value="{{ delivery.id }}">
+<input type="hidden" id="pickupLat" value="{{ delivery.provider_lat }}">
+<input type="hidden" id="pickupLng" value="{{ delivery.provider_lng }}">
+<input type="hidden" id="deliveryLat" value="{{ delivery.customer_lat }}">
+<input type="hidden" id="deliveryLng" value="{{ delivery.customer_lng }}">
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusUpdateModalLabel">Update Delivery Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to update the status of this delivery?</p>
+                <div id="statusUpdateMessage"></div>
+                <input type="hidden" id="deliveryId">
+                <input type="hidden" id="newStatus">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusUpdate">Confirm Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/delivery.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,145 @@
+
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h3">My Deliveries</h1>
+        <p class="text-muted">Manage and track all your assigned deliveries</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('delivery_list') }}" class="btn btn-outline-light">
+            <i class="fas fa-sync-alt me-1"></i> Reset Filters
+        </a>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="card bg-dark mb-4 border-0">
+    <div class="card-body">
+        <form action="{{ url_for('delivery_list') }}" method="get" class="row g-3">
+            <!-- Status Filter -->
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {{ 'selected' if status == 'pending' else '' }}>Pending</option>
+                    <option value="in-progress" {{ 'selected' if status == 'in-progress' else '' }}>In Progress</option>
+                    <option value="completed" {{ 'selected' if status == 'completed' else '' }}>Completed</option>
+                    <option value="cancelled" {{ 'selected' if status == 'cancelled' else '' }}>Cancelled</option>
+                </select>
+            </div>
+            
+            <!-- Date Filter -->
+            <div class="col-md-3">
+                <label for="date" class="form-label">Date</label>
+                <select class="form-select" id="date" name="date">
+                    <option value="">All Dates</option>
+                    <option value="today" {{ 'selected' if date == 'today' else '' }}>Today</option>
+                    <option value="tomorrow" {{ 'selected' if date == 'tomorrow' else '' }}>Tomorrow</option>
+                    <option value="week" {{ 'selected' if date == 'week' else '' }}>This Week</option>
+                </select>
+            </div>
+            
+            <!-- Search -->
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search" placeholder="Customer, Address, Order #..." value="{{ search }}">
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Deliveries List -->
+<div class="card border-0">
+    <div class="card-body p-0">
+        {% if deliveries|length == 0 %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+            <h5>No deliveries found</h5>
+            <p class="text-muted">Try adjusting your filters or check back later</p>
+        </div>
+        {% else %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Pick Up</th>
+                        <th>Scheduled Time</th>
+                        <th>Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for delivery in deliveries %}
+                    <tr>
+                        <td>#{{ delivery.id }}</td>
+                        <td>
+                            <div>{{ delivery.customer_name }}</div>
+                            <small class="text-muted">{{ delivery.customer_phone }}</small>
+                        </td>
+                        <td>{{ delivery.provider_name }}</td>
+                        <td>{{ format_datetime(delivery.scheduled_time) }}</td>
+                        <td>
+                            <span class="badge {{ get_status_class(delivery.status) }}">
+                                {{ delivery.status.capitalize() }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('delivery_details', delivery_id=delivery.id) }}" class="btn btn-sm btn-outline-info me-1">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if delivery.status == 'pending' %}
+                            <button type="button" class="btn btn-sm btn-outline-primary update-status" data-id="{{ delivery.id }}" data-status="in-progress">
+                                <i class="fas fa-truck"></i>
+                            </button>
+                            {% elif delivery.status == 'in-progress' %}
+                            <button type="button" class="btn btn-sm btn-outline-success update-status" data-id="{{ delivery.id }}" data-status="completed">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusUpdateModalLabel">Update Delivery Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to update the status of this delivery?</p>
+                <div id="statusUpdateMessage"></div>
+                <input type="hidden" id="deliveryId">
+                <input type="hidden" id="newStatus">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusUpdate">Confirm Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/delivery.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,133 @@
+/* Custom styles for NutriDelivery App */
+
+body {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 280px;
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+}
+
+.b-example-divider {
+    flex-shrink: 0;
+    width: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.main-content {
+    flex: 1;
+    overflow-x: hidden;
+}
+
+/* Map styles */
+.map-container {
+    height: 400px;
+    width: 100%;
+    border-radius: 0.25rem;
+}
+
+.delivery-map {
+    height: 250px;
+}
+
+/* Custom markers */
+.custom-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: white;
+    font-size: 16px;
+}
+
+/* Delivery timeline */
+.delivery-timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.delivery-timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background-color: #adb5bd;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: -30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    z-index: 1;
+}
+
+.timeline-content {
+    margin-left: 10px;
+}
+
+/* Info Box */
+.info-box {
+    border-left: 3px solid var(--bs-info);
+}
+
+/* Status badges */
+.badge-pending {
+    background-color: var(--bs-secondary);
+}
+
+.badge-inprogress {
+    background-color: var(--bs-primary);
+}
+
+.badge-completed {
+    background-color: var(--bs-success);
+}
+
+.badge-cancelled {
+    background-color: var(--bs-danger);
+}
+
+.badge-delayed {
+    background-color: var(--bs-warning);
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 767.98px) {
+    body {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        min-height: auto;
+        position: relative;
+    }
+    
+    .b-example-divider {
+        width: 100%;
+        height: 1px;
+    }
+    
+    .map-container {
+        height: 300px;
+    }
+}

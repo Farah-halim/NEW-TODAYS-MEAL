@@ -1,0 +1,212 @@
+
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h3">My Profile</h1>
+        <p class="text-muted">Manage your account and view your delivery statistics</p>
+    </div>
+</div>
+
+{% if success_message %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ success_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+{% if error_message %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Profile Information Column -->
+    <div class="col-md-8">
+        <!-- Profile Card -->
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Personal Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('profile') }}">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ user.name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="employee_id" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employee_id" value="{{ user.employee_id }}" readonly>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" value="{{ user.username }}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="joined_date" class="form-label">Joined Date</label>
+                            <input type="text" class="form-control" id="joined_date" value="{{ user.created_at.split(' ')[0] if user.created_at else '' }}" readonly>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" name="update_profile" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Update Profile
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Change Password Card -->
+        <div class="card border-0">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Change Password</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('profile') }}">
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password" required>
+                            <div class="form-text">Password must be at least 8 characters long</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" name="change_password" class="btn btn-warning">
+                        <i class="fas fa-key me-1"></i> Change Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Column -->
+    <div class="col-md-4">
+        <!-- Profile Summary Card -->
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Profile Summary</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <div class="avatar avatar-xl mb-3">
+                        <span class="avatar-text rounded-circle bg-primary bg-opacity-10 text-primary">
+                            {% set name_parts = user.name.split() %}
+                            {% set initials = '' %}
+                            {% for part in name_parts[:2] %}
+                                {% set initials = initials + part[0] %}
+                            {% endfor %}
+                            {{ initials }}
+                        </span>
+                    </div>
+                    <h5 class="mb-1">{{ user.name }}</h5>
+                    <p class="text-muted mb-0">Delivery Partner</p>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Completion Rate</span>
+                        <span>{{ completion_rate }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ completion_rate }}%" aria-valuenow="{{ completion_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delivery Stats Card -->
+        <div class="card border-0">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0">Delivery Statistics</h5>
+            </div>
+            <div class="card-body">
+                <!-- Total Deliveries -->
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-2 bg-primary bg-opacity-10">
+                            <i class="fas fa-truck text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>Total Deliveries</div>
+                            <div class="fw-bold">{{ stats.total_deliveries }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Completed Deliveries -->
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-2 bg-success bg-opacity-10">
+                            <i class="fas fa-check text-success"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>Completed</div>
+                            <div class="fw-bold">{{ stats.completed_deliveries }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Average Delivery Time -->
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-2 bg-info bg-opacity-10">
+                            <i class="fas fa-clock text-info"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>Avg Delivery Time</div>
+                            <div class="fw-bold">{{ stats.avg_delivery_time }} min</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Completion Rate -->
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-2 bg-warning bg-opacity-10">
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>Completion Rate</div>
+                            <div class="fw-bold">{{ completion_rate }}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
