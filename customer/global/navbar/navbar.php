@@ -24,7 +24,7 @@
                 <span class="nav-icon meals"></span>
                 <span class="nav-text">My Orders</span>
             </a>
-            <a href="../support/support.php" class="nav-item">
+            <a href="\NEW-TODAYS-MEAL\customer\support\support.php" class="nav-item">
                 <span class="nav-icon support"></span>
                 <span class="nav-text">Support</span>
             </a>
