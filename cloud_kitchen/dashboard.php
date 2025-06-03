@@ -1,11 +1,10 @@
 <?php
 session_start();
-require_once '../DB_connection.php'; // Assuming you have a database connection file
+require_once '../DB_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-
-    header("Location: \NEW-TODAYS-MEAL\1 - Register & Login Codes\login.php");
+    header("Location: \NEW-TODAYS-MEAL\Register&Login\login.php");
     exit();
 }
 
@@ -24,12 +23,94 @@ $user = $result->fetch_assoc();
 
 // Check if user is a cloud kitchen owner
 if (!$user || $user['u_role'] != 'external_user' || $user['ext_role'] != 'cloud_kitchen_owner' || !$user['cloud_kitchen_id']) {
-    header("Location: unauthorized.php"); // Redirect if not authorized
+    header("Location: unauthorized.php");
     exit();
 }
 
 // Store cloud kitchen ID in session for future use
 $_SESSION['cloud_kitchen_id'] = $user['cloud_kitchen_id'];
+
+// Get today's date for filtering orders
+$today = date('Y-m-d');
+
+// Get latest 5 orders for this cloud kitchen
+$orders_query = "SELECT o.order_id, o.total_price, o.ord_type, o.order_date, o.order_status, 
+                        o.delivery_type, c.u_name AS customer_name, co.ord_description AS custom_description
+                 FROM orders o
+                 JOIN customer cust ON o.customer_id = cust.user_id
+                 JOIN users c ON cust.user_id = c.user_id
+                 LEFT JOIN customized_order co ON o.order_id = co.order_id
+                 WHERE o.cloud_kitchen_id = ?
+                 ORDER BY o.order_date DESC
+                 LIMIT 5";
+$orders_stmt = $conn->prepare($orders_query);
+$orders_stmt->bind_param("i", $user['cloud_kitchen_id']);
+$orders_stmt->execute();
+$orders_result = $orders_stmt->get_result();
+$orders = $orders_result->fetch_all(MYSQLI_ASSOC);
+
+// Get order items for each order
+foreach ($orders as &$order) {
+    if ($order['ord_type'] == 'customized') {
+        // For customized orders, use the description as the "item"
+        $order['items'] = [['name' => 'Custom Order', 'quantity' => 1, 'description' => $order['custom_description']]];
+    } 
+    elseif ($order['delivery_type'] == 'daily_delivery') {
+        // For scheduled orders with daily delivery, get packages and their meals
+        $packages_query = "SELECT op.package_id, op.package_name
+                           FROM order_packages op
+                           WHERE op.order_id = ?";
+        $packages_stmt = $conn->prepare($packages_query);
+        $packages_stmt->bind_param("i", $order['order_id']);
+        $packages_stmt->execute();
+        $packages_result = $packages_stmt->get_result();
+        $packages = $packages_result->fetch_all(MYSQLI_ASSOC);
+        
+        $order['items'] = [];
+        foreach ($packages as $package) {
+            $package_items_query = "SELECT m.name, mip.quantity
+                                   FROM meals_in_each_package mip
+                                   JOIN meals m ON mip.meal_id = m.meal_id
+                                   WHERE mip.package_id = ?";
+            $package_items_stmt = $conn->prepare($package_items_query);
+            $package_items_stmt->bind_param("i", $package['package_id']);
+            $package_items_stmt->execute();
+            $package_items_result = $package_items_stmt->get_result();
+            $package_items = $package_items_result->fetch_all(MYSQLI_ASSOC);
+            
+            foreach ($package_items as $item) {
+                $order['items'][] = $item;
+            }
+        }
+    } else {
+        // For regular orders, get items from order_content
+        $items_query = "SELECT m.name, oc.quantity, oc.price
+                        FROM order_content oc
+                        JOIN meals m ON oc.meal_id = m.meal_id
+                        WHERE oc.order_id = ?";
+        $items_stmt = $conn->prepare($items_query);
+        $items_stmt->bind_param("i", $order['order_id']);
+        $items_stmt->execute();
+        $items_result = $items_stmt->get_result();
+        $order['items'] = $items_result->fetch_all(MYSQLI_ASSOC);
+    }
+}
+unset($order);
+
+// Calculate today's revenue and order counts
+$stats_query = "SELECT 
+                SUM(CASE WHEN DATE(o.order_date) = ? THEN o.total_price ELSE 0 END) AS today_revenue,
+                COUNT(CASE WHEN DATE(o.order_date) = ? THEN 1 ELSE NULL END) AS today_orders,
+                COUNT(CASE WHEN DATE(o.order_date) = ? AND o.order_status = 'delivered' THEN 1 ELSE NULL END) AS completed_orders,
+                COUNT(CASE WHEN DATE(o.order_date) = ? AND o.order_status IN ('pending', 'preparing', 'ready_for_pickup', 'in_transit') THEN 1 ELSE NULL END) AS pending_orders,
+                (SELECT COUNT(*) FROM meals WHERE cloud_kitchen_id = ? AND status = 'out of stock') AS out_of_stock
+                FROM orders o
+                WHERE o.cloud_kitchen_id = ?";
+$stats_stmt = $conn->prepare($stats_query);
+$stats_stmt->bind_param("ssssii", $today, $today, $today, $today, $user['cloud_kitchen_id'], $user['cloud_kitchen_id']);
+$stats_stmt->execute();
+$stats_result = $stats_stmt->get_result();
+$stats = $stats_result->fetch_assoc();
 ?>
 <html>
 <head>
@@ -47,7 +128,7 @@ $_SESSION['cloud_kitchen_id'] = $user['cloud_kitchen_id'];
                       <div class="stat-content">
                           <div class="stat-info">
                               <p class="stat-label">Today's Revenue</p>
-                              <p class="stat-value"><span>$</span>1875.50</p>
+                              <p class="stat-value"><span>$</span><?php echo number_format($stats['today_revenue'] ?? 0, 2); ?></p>
                           </div>
                           <div class="stat-icon revenue"></div>
                       </div>
@@ -62,18 +143,18 @@ $_SESSION['cloud_kitchen_id'] = $user['cloud_kitchen_id'];
                       <div class="stat-content">
                           <div class="stat-info">
                               <p class="stat-label">Orders Received Today</p>
-                              <p class="stat-value">48</p>
+                              <p class="stat-value"><?php echo $stats['today_orders'] ?? 0; ?></p>
                           </div>
                           <div class="stat-icon orders"></div>
                       </div>
                       <div class="stat-footer">
                           <span class="stat-detail completed">
                               <img src="https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-18.svg" />
-                              32 Completed
+                              <?php echo $stats['completed_orders'] ?? 0; ?> Completed
                           </span>
                           <span class="stat-detail pending">
                               <img src="front_end/dashboard/pending.png" />
-                              16 Pending
+                              <?php echo $stats['pending_orders'] ?? 0; ?> Pending
                           </span>
                       </div>
                   </div>
@@ -82,7 +163,7 @@ $_SESSION['cloud_kitchen_id'] = $user['cloud_kitchen_id'];
                       <div class="stat-content">
                           <div class="stat-info">
                               <p class="stat-label">Out of Stock Meals</p>
-                              <p class="stat-value">3</p>
+                              <p class="stat-value"><?php echo $stats['out_of_stock'] ?? 0; ?></p>
                           </div>
                           <div class="stat-icon stock"></div>
                       </div>
@@ -114,49 +195,40 @@ $_SESSION['cloud_kitchen_id'] = $user['cloud_kitchen_id'];
                           </tr>
                       </thead>
                       <tbody>
+                          <?php foreach ($orders as $order): 
+                              $order_time = date("h:i A", strtotime($order['order_date']));
+                              $order_type_class = strtolower(str_replace(' ', '-', $order['ord_type']));
+                              $order_status_class = strtolower(str_replace(' ', '-', $order['order_status']));
+                          ?>
                           <tr>
-                              <td>#ORD001</td>
-                              <td>2x Grilled Chicken, 1x Caesar Salad</td>
-                              <td><span class="order-type normal">Normal</span></td>
-                              <td>$45.98</td>
-                              <td>10:30 AM</td>
-                              <td><span class="order-status completed">Completed</span></td>
+                              <td>#ORD<?php echo str_pad($order['order_id'], 3, '0', STR_PAD_LEFT); ?></td>
+                              <td>
+                                  <?php 
+                                  $items_display = [];
+                                  foreach ($order['items'] as $item) {
+                                      if ($order['ord_type'] == 'customized') {
+                                          // Show abbreviated custom order description
+                                          $short_desc = strlen($item['description']) > 50 
+                                              ? substr($item['description'], 0, 50) . '...' 
+                                              : $item['description'];
+                                          $items_display[] = '<span title="'.htmlspecialchars($item['description']).'">Custom: '.htmlspecialchars($short_desc).'</span>';
+                                      } else {
+                                          $items_display[] = $item['quantity'] . 'x ' . $item['name'];
+                                      }
+                                  }
+                                  echo implode(', ', $items_display);
+                                  ?>
+                              </td>
+                              <td><span class="order-type <?php echo $order_type_class; ?>"><?php echo ucfirst($order['ord_type']); ?></span></td>
+                              <td>$<?php echo number_format($order['total_price'], 2); ?></td>
+                              <td><?php echo $order_time; ?></td>
+                              <td><span class="order-status <?php echo $order_status_class; ?>"><?php echo ucfirst(str_replace('_', ' ', $order['order_status'])); ?></span></td>
                           </tr>
-                          <tr>
-                              <td>#ORD002</td>
-                              <td>1x Vegetable Salad, 2x Fruit Smoothie</td>
-                              <td><span class="order-type scheduled">Weekly Scheduled</span></td>
-                              <td>$28.97</td>
-                              <td>11:15 AM</td>
-                              <td><span class="order-status preparing">Preparing</span></td>
-                          </tr>
-                          <tr>
-                              <td>#ORD003</td>
-                              <td>3x Pasta Carbonara</td>
-                              <td><span class="order-type normal">Normal</span></td>
-                              <td>$44.97</td>
-                              <td>11:45 AM</td>
-                              <td><span class="order-status pending">Pending</span></td>
-                          </tr>
-                          <tr>
-                              <td>#ORD004</td>
-                              <td>1x Grilled Chicken, 1x Chocolate Cake</td>
-                              <td><span class="order-type scheduled">Weekly Scheduled</span></td>
-                              <td>$32.98</td>
-                              <td>12:00 PM</td>
-                              <td><span class="order-status ready">Ready</span></td>
-                          </tr>
-                          <tr>
-                              <td>#ORD005</td>
-                              <td>2x Caesar Salad, 1x Fruit Smoothie</td>
-                              <td><span class="order-type normal">Normal</span></td>
-                              <td>$35.97</td>
-                              <td>12:30 PM</td>
-                              <td><span class="order-status pending">Pending</span></td>
-                          </tr>
+                          <?php endforeach; ?>
                       </tbody>
                   </table>
               </section>
           </main>
       </div>
   </body>
+</html>

@@ -28,25 +28,117 @@ if (!isset($_SESSION['cloud_kitchen_id'])) {
 
 $cloud_kitchen_id = $_SESSION['cloud_kitchen_id'];
 
+
 // Handle status update requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     
-    if ($_POST['action'] === 'update_status') {
-        $order_id = $_POST['order_id'] ?? null;
-        $new_status = $_POST['new_status'] ?? null;
-        
-        if (!$new_status || !$order_id) {
+    if ($_POST['action'] === 'update_package_status') {
+    $package_id = $_POST['package_id'] ?? null;
+    $new_status = $_POST['new_status'] ?? null;
+    
+        if (!$new_status || !$package_id) {
             echo json_encode(['success' => false, 'message' => 'Missing parameters']);
             exit;
         }
         
-        $valid_statuses = ['preparing', 'ready_for_pickup', 'in_transit'];
+        $valid_statuses = ['preparing', 'ready_for_pickup', 'in_transit', 'delivered'];
         if (!in_array($new_status, $valid_statuses)) {
             echo json_encode(['success' => false, 'message' => 'Invalid status']);
             exit;
         }
 
+        // Verify the package belongs to this kitchen
+        $verify_stmt = $conn->prepare("SELECT op.package_id 
+                                    FROM order_packages op
+                                    JOIN orders o ON op.order_id = o.order_id
+                                    WHERE op.package_id = ? AND o.cloud_kitchen_id = ?");
+        $verify_stmt->bind_param("ii", $package_id, $cloud_kitchen_id);
+        $verify_stmt->execute();
+        
+        if ($verify_stmt->get_result()->num_rows !== 1) {
+            echo json_encode(['success' => false, 'message' => 'Package not found or unauthorized']);
+            exit;
+        }
+
+        // Update package status
+        $stmt = $conn->prepare("UPDATE order_packages SET package_status = ? WHERE package_id = ?");
+        $stmt->bind_param("si", $new_status, $package_id);
+        
+        // In the update_package_status section, replace the status update logic with:
+        if ($stmt->execute()) {
+            // Get the order_id for this package
+            $order_id_stmt = $conn->prepare("SELECT order_id FROM order_packages WHERE package_id = ?");
+            $order_id_stmt->bind_param("i", $package_id);
+            $order_id_stmt->execute();
+            $order_id_result = $order_id_stmt->get_result();
+            $order_id_row = $order_id_result->fetch_assoc();
+            $order_id = $order_id_row['order_id'];
+            
+            // Get all packages for this order
+            $check_stmt = $conn->prepare("SELECT package_status FROM order_packages WHERE order_id = ?");
+            $check_stmt->bind_param("i", $order_id);
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
+            
+            $status_counts = [
+                'pending' => 0,
+                'preparing' => 0,
+                'ready_for_pickup' => 0,
+                'in_transit' => 0,
+                'delivered' => 0,
+                'cancelled' => 0
+            ];
+            
+            while ($row = $result->fetch_assoc()) {
+                $status_counts[$row['package_status']]++;
+            }
+            
+            $total_packages = array_sum($status_counts);
+            
+            // Determine the new order status based on package statuses
+            $new_order_status = 'pending'; // default
+            
+            if ($status_counts['delivered'] == $total_packages) {
+                $new_order_status = 'delivered';
+            } elseif ($status_counts['in_transit'] > 0) {
+                if ($status_counts['in_transit'] + $status_counts['delivered'] == $total_packages) {
+                    $new_order_status = 'in_transit';
+                }
+            } elseif ($status_counts['ready_for_pickup'] > 0) {
+                if ($status_counts['ready_for_pickup'] + $status_counts['in_transit'] + $status_counts['delivered'] == $total_packages) {
+                    $new_order_status = 'ready_for_pickup';
+                }
+            } elseif ($status_counts['preparing'] > 0) {
+                if ($status_counts['preparing'] + $status_counts['ready_for_pickup'] + $status_counts['in_transit'] + $status_counts['delivered'] == $total_packages) {
+                    $new_order_status = 'preparing';
+                }
+            }
+            
+            // Update order status if needed
+            $update_order_stmt = $conn->prepare("UPDATE orders SET order_status = ? WHERE order_id = ?");
+            $update_order_stmt->bind_param("si", $new_order_status, $order_id);
+            $update_order_stmt->execute();
+            
+            echo json_encode(['success' => true]);
+        }
+        exit;
+    }
+    elseif ($_POST['action'] === 'update_status') {
+    $order_id = $_POST['order_id'] ?? null;
+    $new_status = $_POST['new_status'] ?? null;
+    
+        if (!$new_status || !$order_id) {
+            echo json_encode(['success' => false, 'message' => 'Missing parameters']);
+            exit;
+        }
+        
+        $valid_statuses = ['preparing', 'ready_for_pickup', 'in_transit', 'delivered'];
+        if (!in_array($new_status, $valid_statuses)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid status']);
+            exit;
+        }
+        
         // Verify the order belongs to this kitchen
         $verify_stmt = $conn->prepare("SELECT order_id FROM orders WHERE order_id = ? AND cloud_kitchen_id = ?");
         $verify_stmt->bind_param("ii", $order_id, $cloud_kitchen_id);
@@ -56,10 +148,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             echo json_encode(['success' => false, 'message' => 'Order not found or unauthorized']);
             exit;
         }
-
+        
         // Update order status
-        $stmt = $conn->prepare("UPDATE orders SET order_status = ? WHERE order_id = ? AND cloud_kitchen_id = ?");
-        $stmt->bind_param("sii", $new_status, $order_id, $cloud_kitchen_id);
+        $stmt = $conn->prepare("UPDATE orders SET order_status = ? WHERE order_id = ?");
+        $stmt->bind_param("si", $new_status, $order_id);
         
         if ($stmt->execute()) {
             echo json_encode(['success' => true]);
@@ -72,15 +164,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 // Get all orders for this kitchen with proper filtering
 $sql = "SELECT o.*, 
-               u.u_name AS customer_name,
-               cko.business_name AS kitchen_name,
-               co.status AS custom_order_status
+        u.u_name AS customer_name,
+        cko.business_name AS kitchen_name,
+        co.status AS custom_order_status
         FROM orders o
         JOIN users u ON o.customer_id = u.user_id
         JOIN cloud_kitchen_owner cko ON o.cloud_kitchen_id = cko.user_id
         LEFT JOIN customized_order co ON o.order_id = co.order_id
+        LEFT JOIN payment_details pd ON o.order_id = pd.order_id
         WHERE o.cloud_kitchen_id = ? 
-        AND (o.ord_type != 'customized' OR (o.ord_type = 'customized' AND co.status = 'accepted' AND co.customer_approval = 'approved'))
+        AND (o.ord_type != 'customized' OR (o.ord_type = 'customized' AND pd.payment_id IS NOT NULL))
         ORDER BY o.order_date DESC";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $cloud_kitchen_id);
@@ -121,42 +214,47 @@ if (!empty($orders)) {
     
     // Fetch all order items (for normal orders and scheduled all_at_once)
     $sql = "SELECT oc.order_id, m.name AS meal_name, oc.quantity, oc.price 
-            FROM order_content oc
-            JOIN meals m ON oc.meal_id = m.meal_id
-            JOIN orders o ON oc.order_id = o.order_id
-            WHERE oc.order_id IN ($placeholders)
-            AND (o.ord_type = 'normal' OR (o.ord_type = 'scheduled' AND o.delivery_type = 'all_at_once'))";
+        FROM order_content oc
+        JOIN meals m ON oc.meal_id = m.meal_id
+        JOIN orders o ON oc.order_id = o.order_id
+        WHERE oc.order_id IN ($placeholders)
+        AND (o.ord_type = 'normal' OR o.ord_type = 'scheduled')";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param(str_repeat('i', count($order_ids)), ...$order_ids);
     $stmt->execute();
     $items_result = $stmt->get_result();
-    $all_items = [];
-    
+
+    // Initialize the array properly
+    $all_items = array_fill_keys($order_ids, []);
+
     while ($row = $items_result->fetch_assoc()) {
         $all_items[$row['order_id']][] = $row;
     }
 
     // Fetch all packages for scheduled daily_delivery orders
     $sql = "SELECT op.order_id, 
-                   op.package_id, 
-                   op.package_name, 
-                   op.delivery_date,  
-                   op.package_price,
-                   GROUP_CONCAT(CONCAT(mip.quantity, 'x ', m.name, ' - $', mip.price) SEPARATOR '<br>') AS items
-            FROM order_packages op
-            JOIN meals_in_each_package mip ON op.package_id = mip.package_id
-            JOIN meals m ON mip.meal_id = m.meal_id
-            JOIN orders o ON op.order_id = o.order_id
-            WHERE op.order_id IN ($placeholders)
-            AND o.ord_type = 'scheduled' 
-            AND o.delivery_type = 'daily_delivery'
-            GROUP BY op.package_id";
+               op.package_id, 
+               op.package_name, 
+               op.delivery_date,  
+               op.package_price,
+               op.package_status,
+               GROUP_CONCAT(CONCAT(mip.quantity, 'x ', m.name, ' - $', mip.price) SEPARATOR '<br>') AS items
+        FROM order_packages op
+        JOIN meals_in_each_package mip ON op.package_id = mip.package_id
+        JOIN meals m ON mip.meal_id = m.meal_id
+        JOIN orders o ON op.order_id = o.order_id
+        WHERE op.order_id IN ($placeholders)
+        AND o.ord_type = 'scheduled' 
+        AND o.delivery_type = 'daily_delivery'
+        GROUP BY op.package_id, op.order_id";  // Note the added GROUP BY field
     $stmt = $conn->prepare($sql);
     $stmt->bind_param(str_repeat('i', count($order_ids)), ...$order_ids);
     $stmt->execute();
     $packages_result = $stmt->get_result();
-    $all_packages = [];
-    
+
+    // Initialize the array properly
+    $all_packages = array_fill_keys($order_ids, []);
+
     while ($row = $packages_result->fetch_assoc()) {
         $all_packages[$row['order_id']][] = $row;
     }
@@ -315,12 +413,14 @@ if (!empty($orders)) {
                                             echo 'Order Items (All at Once)';
                                         }
                                     ?></h4>
-                                    <select class="status-select" onchange="updateStatus(<?php echo $order_id; ?>, this.value)">
-                                        <option value="" selected disabled>Update Status</option>
-                                        <option value="preparing" <?php echo ($order_status == 'preparing') ? 'selected' : ''; ?>>Preparing</option>
-                                        <option value="ready_for_pickup" <?php echo ($order_status == 'ready_for_pickup') ? 'selected' : ''; ?>>Ready</option>
-                                        <option value="in_transit" <?php echo ($order_status == 'in_transit') ? 'selected' : ''; ?>>With Delivery</option>
-                                    </select>
+                                    <?php if ($delivery_type != 'daily_delivery' && !in_array($order_status, ['in_transit', 'delivered'])): ?>
+                                        <select class="status-select" onchange="updateStatus(<?php echo $order_id; ?>, this.value)">
+                                            <option value="" selected disabled>Update Status</option>
+                                            <option value="preparing" <?php echo ($order_status == 'preparing') ? 'selected' : ''; ?>>Preparing</option>
+                                            <option value="ready_for_pickup" <?php echo ($order_status == 'ready_for_pickup') ? 'selected' : ''; ?>>Ready</option>
+                                            <option value="in_transit" <?php echo ($order_status == 'in_transit') ? 'selected' : ''; ?>>With Delivery</option>
+                                        </select>
+                                    <?php endif; ?>
                                 </div>
 
                                 <?php if($delivery_type == 'daily_delivery'): ?>
@@ -330,6 +430,17 @@ if (!empty($orders)) {
                                         <div class="package" data-package-id="<?php echo $package['package_id']; ?>">
                                             <div class="package-header">
                                                 <span><?php echo $package['package_name']; ?> (<?php echo date('F j, Y', strtotime($package['delivery_date'])); ?>)</span>
+                                                <span class="package-status <?php echo str_replace('_', '-', $package['package_status']); ?>">
+                                                    Status: <?php echo ucfirst(str_replace('_', ' ', $package['package_status'])); ?>
+                                                </span>
+                                                <?php if (!in_array($package['package_status'], ['in_transit', 'delivered'])): ?>
+                                                    <select class="package-status-select" onchange="updatePackageStatus(<?php echo $package['package_id']; ?>, this.value)">
+                                                        <option value="" selected disabled>Update Status</option>
+                                                        <option value="preparing" <?php echo ($package['package_status'] == 'preparing') ? 'selected' : ''; ?>>Preparing</option>
+                                                        <option value="ready_for_pickup" <?php echo ($package['package_status'] == 'ready_for_pickup') ? 'selected' : ''; ?>>Ready</option>
+                                                        <option value="in_transit" <?php echo ($package['package_status'] == 'in_transit') ? 'selected' : ''; ?>>With Delivery</option>
+                                                    </select>
+                                                <?php endif; ?>
                                             </div>
                                             <div class="package-items">
                                                 <?php echo $package['items']; ?>
@@ -340,21 +451,11 @@ if (!empty($orders)) {
                                     <?php else: ?>
                                     <p>No packages found for this order</p>
                                     <?php endif; ?>
-                                <?php else: ?>
-                                    <?php if (!empty($order['items'])): ?>
-                                    <ul>
-                                        <?php foreach ($order['items'] as $item): ?>
-                                        <li><?php echo $item['quantity']; ?>x <?php echo $item['meal_name']; ?> - $<?php echo number_format($item['price'], 2); ?></li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                    <?php else: ?>
-                                    <p>No items found for this order</p>
-                                    <?php endif; ?>
                                 <?php endif; ?>
                             <?php elseif ($order_type == 'customized' && isset($order['custom_details'])): ?>
                                 <div class="items-header">
                                     <h4>Custom Order Details</h4>
-                                    <?php if (!in_array($order_status, ['delivered', 'in_transit'])): ?>
+                                    <?php if (!in_array($order_status, ['in_transit', 'delivered'])): ?>
                                         <select class="status-select" onchange="updateStatus(<?php echo $order_id; ?>, this.value)">
                                             <option value="" selected disabled>Update Status</option>
                                             <option value="preparing" <?php echo ($order_status == 'preparing') ? 'selected' : ''; ?>>Preparing</option>
@@ -377,12 +478,14 @@ if (!empty($orders)) {
                             <?php else: ?>
                                 <div class="items-header">
                                     <h4>Order Items</h4>
-                                    <select class="status-select" onchange="updateStatus(<?php echo $order_id; ?>, this.value)">
-                                        <option value="" selected disabled>Update Status</option>
-                                        <option value="preparing" <?php echo ($order_status == 'preparing') ? 'selected' : ''; ?>>Preparing</option>
-                                        <option value="ready_for_pickup" <?php echo ($order_status == 'ready_for_pickup') ? 'selected' : ''; ?>>Ready</option>
-                                        <option value="in_transit" <?php echo ($order_status == 'in_transit') ? 'selected' : ''; ?>>With Delivery</option>
-                                    </select>
+                                    <?php if (!in_array($order_status, ['in_transit', 'delivered'])): ?>
+                                        <select class="status-select" onchange="updateStatus(<?php echo $order_id; ?>, this.value)">
+                                            <option value="" selected disabled>Update Status</option>
+                                            <option value="preparing" <?php echo ($order_status == 'preparing') ? 'selected' : ''; ?>>Preparing</option>
+                                            <option value="ready_for_pickup" <?php echo ($order_status == 'ready_for_pickup') ? 'selected' : ''; ?>>Ready</option>
+                                            <option value="in_transit" <?php echo ($order_status == 'in_transit') ? 'selected' : ''; ?>>With Delivery</option>
+                                        </select>
+                                    <?php endif; ?>
                                 </div>
                                 <?php if (!empty($order['items'])): ?>
                                 <ul>
@@ -511,6 +614,38 @@ function applyFilters() {
     updateInsights();
 }
 
+function updatePackageStatus(packageId, status) {
+    if (!status) return;
+
+    const formData = new FormData();
+    formData.append('action', 'update_package_status');
+    formData.append('new_status', status);
+    formData.append('package_id', packageId);
+
+    fetch('orders.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Reload the page to reflect all changes
+            location.reload();
+        } else {
+            alert('Error updating status: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating package status. Please try again.');
+    });
+}
+
 // Function to update insights based on visible orders
 function updateInsights() {
     const visibleOrders = document.querySelectorAll('.order-card:not(.hidden)');
@@ -570,10 +705,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateFilter = document.getElementById('dateFilter');
     dateFilter.addEventListener('change', () => filterByDate(dateFilter.value));
 
-    // Toggle order card expansion
+    // Toggle order card expansion - modified to ignore clicks on package status selects
     document.querySelectorAll('.order-card').forEach(card => {
         card.addEventListener('click', (e) => {
-            if (!e.target.closest('.status-select')) {
+            // Check if the click was on a package status select or its parent
+            if (!e.target.closest('.status-select') && !e.target.closest('.package-status-select')) {
                 card.classList.toggle('expanded');
             }
         });
@@ -585,6 +721,13 @@ document.addEventListener('DOMContentLoaded', () => {
             this.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             applyFilters();
+        });
+    });
+
+    // Prevent package status selects from closing the card when clicked
+    document.querySelectorAll('.package-status-select').forEach(select => {
+        select.addEventListener('click', (e) => {
+            e.stopPropagation();
         });
     });
 });

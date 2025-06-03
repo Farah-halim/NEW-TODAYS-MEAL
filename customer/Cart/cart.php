@@ -17,10 +17,6 @@ if (isset($_SESSION['redirect_reason'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Function to calculate VAT
-function calculateVAT($amount, $rate = 14) {
-    return $amount * ($rate / 100);
-}
 
 // Initialize variables
 $emptyCart = true;
@@ -79,9 +75,7 @@ if ($cartsResult && mysqli_num_rows($cartsResult) > 0) {
                 }
             }
             
-            $cartData['vat'] = calculateVAT($cartData['subtotal']);
-            $cartData['deliveryFee'] = 15.00; // Fixed delivery fee per cloud kitchen
-            $cartData['total'] = $cartData['subtotal'] + $cartData['vat'] + $cartData['deliveryFee'];
+            $cartData['total'] = $cartData['subtotal'];
             $cartData['items'] = $cartItems;
             
             $allCarts[] = $cartData;
@@ -193,7 +187,7 @@ if ($cartsResult && mysqli_num_rows($cartsResult) > 0) {
                             $is_out_of_stock = $item['status'] == 'out of stock' || $item['stock_quantity'] <= 0;
                         ?>
                         <div class="cart-item <?= $is_out_of_stock ? 'out-of-stock' : '' ?>">
-                            <img src="../../../uploads/meals/<?= htmlspecialchars($item['photo'] ?? 'default-meal.jpg') ?>" 
+                            <img src="../../uploads/meals/<?= htmlspecialchars($item['photo'] ?? 'default-meal.jpg') ?>" 
                                  alt="<?= htmlspecialchars($item['name']) ?>" class="item-image">
                             
                             <div class="item-details">
@@ -212,7 +206,7 @@ if ($cartsResult && mysqli_num_rows($cartsResult) > 0) {
                                     <i class="fas fa-minus"></i>
                                 </button>
                                 <span class="quantity-display"><?= $item['quantity'] ?></span>
-                                <button class="quantity-btn" onclick="updateQuantity(<?= $item['cart_item_id'] ?>, 1)" <?= $is_out_of_stock ? 'disabled' : '' ?>>
+                                <button class="quantity-btn" onclick="updateQuantity(<?= $item['cart_item_id'] ?>, 1)">
                                     <i class="fas fa-plus"></i>
                                 </button>
                             </div>
@@ -228,7 +222,6 @@ if ($cartsResult && mysqli_num_rows($cartsResult) > 0) {
                     </div>
                     
                     <div class="group-summary">
-                        
                         <div class="group-total-row">
                             <div class="summary-row">
                                 <span>Group Total</span>

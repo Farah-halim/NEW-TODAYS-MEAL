@@ -190,19 +190,30 @@ body {
   font-size: 11.9px;
 }
 
-.order-type.normal {
+/* Order Status Styles - Updated to match database enum values */
+/* ===== Order Status Styles ===== */
+/* Base status style */
+.order-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 11.9px;
+  text-transform: capitalize;
+}
+
+/* ===== Order Status Styles ===== */
+.order-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 11.9px;
+  text-transform: capitalize;
+}
+
+/* Specific status colors - using exact class names */
+.order-status.pending {
   background-color: #f3f4f6;
   color: #1f2937;
-}
-
-.order-type.scheduled {
-  background-color: #f3e8ff;
-  color: #6b21a8;
-}
-
-.order-status.completed {
-  background-color: #dcfce7;
-  color: #166534;
 }
 
 .order-status.preparing {
@@ -210,14 +221,47 @@ body {
   color: #854d0e;
 }
 
-.order-status.pending {
+.order-status.ready_for_pickup {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.order-status.in_transit {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.order-status.delivered {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.order-status.cancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Order Type Styles */
+.order-type {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 11.9px;
+}
+
+.order-type[class*="normal"] {
   background-color: #f3f4f6;
   color: #1f2937;
 }
 
-.order-status.ready {
-  background-color: #dbeafe;
-  color: #1e40af;
+.order-type[class*="scheduled"] {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+}
+
+.order-type[class*="customized"] {
+  background-color: #ecfccb;
+  color: #3f6212;
 }
 
 /* ========== Responsive Media Queries ========== */
@@ -266,3 +310,4 @@ body {
     font-size: 8px;
   }
 }
+

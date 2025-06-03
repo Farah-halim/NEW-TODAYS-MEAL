@@ -275,6 +275,7 @@ body {
 .cart-actions {
     padding: 24px;
     background: white;
+    border-top: 1px solid #E8DDD4;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;

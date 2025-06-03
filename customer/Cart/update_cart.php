@@ -40,10 +40,6 @@ try {
         throw new Exception('Quantity cannot be less than 1', 400);
     }
 
-    // Stock check (only if not ignoring stock)
-    if (!$ignoreStock && $newQuantity > $item['stock_quantity']) {
-        throw new Exception('Not enough stock available', 400);
-    }
 
     // Update quantity using prepared statement
     $updateQuery = "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?";
