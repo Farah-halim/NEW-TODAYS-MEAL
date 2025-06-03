@@ -82,36 +82,22 @@ $show_order_details = isset($_GET['view_order']);
 $order_details = null;
 if ($show_order_details) {
     $order_id = $_GET['view_order'];
+    $query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
+                     o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
+                     pd.delivery_fees, pd.total_payment, o.delivery_type, o.customer_selected_date, o.ord_type
+              FROM orders o
+              JOIN payment_details pd ON o.order_id = pd.order_id
+              JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
+              WHERE o.customer_id = ? AND o.order_id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ii", $user_id, $order_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $order_details = $result->fetch_assoc();
 
-    // Detect if order is scheduled with packages (daily_delivery) or normal/scheduled all_at_once
-    $type_check_query = "SELECT delivery_type FROM orders WHERE order_id = ? AND customer_id = ?";
-    $tstmt = $conn->prepare($type_check_query);
-    $tstmt->bind_param("ii", $order_id, $user_id);
-    $tstmt->execute();
-    $tres = $tstmt->get_result();
-    $delivery_type = null;
-    if ($row = $tres->fetch_assoc()) {
-        $delivery_type = $row['delivery_type'];
-    }
-    $tstmt->close();
-
-    if ($delivery_type === 'daily_delivery') {
-        // Fetch daily delivery order + packages + items in packages
-        $query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
-                         o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
-                         o.delivery_type,
-                         o.customer_selected_date
-                  FROM orders o
-                  JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
-                  WHERE o.customer_id = ? AND o.order_id = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("ii", $user_id, $order_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $order_details = $result->fetch_assoc();
-
-        if ($order_details) {
-            // Fetch packages with their meals
+    if ($order_details) {
+        if ($order_details['ord_type'] === 'scheduled' && $order_details['delivery_type'] === 'daily_delivery') {
+            // Handle daily delivery packages
             $pkg_query = "SELECT p.package_id, p.package_name, p.delivery_date, p.package_price, p.package_status
                           FROM order_packages p
                           WHERE p.order_id = ?
@@ -123,7 +109,6 @@ if ($show_order_details) {
             $packages = [];
             while ($pkg = $pkg_res->fetch_assoc()) {
                 $package_id = $pkg['package_id'];
-                // fetch meals in package
                 $meals_query = "SELECT m.name, mip.quantity, mip.price 
                                 FROM meals_in_each_package mip
                                 JOIN meals m ON m.meal_id = mip.meal_id
@@ -137,8 +122,8 @@ if ($show_order_details) {
                     $meals[] = $meal;
                 }
                 $meals_stmt->close();
-
                 $packages[] = [
+                    'package_id' => $package_id,
                     'package_name' => $pkg['package_name'],
                     'delivery_date' => $pkg['delivery_date'],
                     'package_price' => $pkg['package_price'],
@@ -148,24 +133,9 @@ if ($show_order_details) {
             }
             $pkg_stmt->close();
             $order_details['packages'] = $packages;
-        }
-
-    } else {
-        // normal/scheduled all_at_once order with normal meals list
-        $query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
-                         o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
-                         pd.delivery_fees, pd.total_payment, o.delivery_type, o.customer_selected_date
-                  FROM orders o
-                  JOIN payment_details pd ON o.order_id = pd.order_id
-                  JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
-                  WHERE o.customer_id = ? AND o.order_id = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("ii", $user_id, $order_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $order_details = $result->fetch_assoc();
-
-        if ($order_details) {
+            $order_details['items'] = [];
+        } else {
+            // Handle normal orders and all-at-once scheduled orders
             $query = "SELECT m.name, m.photo, oc.quantity, oc.price 
                       FROM order_content oc
                       JOIN meals m ON oc.meal_id = m.meal_id
@@ -195,58 +165,25 @@ if ($show_rating_modal) {
     $rating_order = $result->fetch_assoc();
 }
 
-// Fetch normal orders
-$normal_orders_query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
+// Fetch all orders (normal, scheduled all_at_once, and scheduled daily_delivery)
+$orders_query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
                  o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
-                 pd.delivery_fees, pd.total_payment
+                 pd.delivery_fees, pd.total_payment, o.delivery_type, o.customer_selected_date, o.ord_type
           FROM orders o
           JOIN payment_details pd ON o.order_id = pd.order_id
           JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
-          WHERE o.customer_id = ? AND o.ord_type = 'normal' $status_condition
+          WHERE o.customer_id = ? $status_condition
           ORDER BY o.order_date DESC";
-$stmt = $conn->prepare($normal_orders_query);
+$stmt = $conn->prepare($orders_query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$normal_orders_result = $stmt->get_result();
-$normal_orders = $normal_orders_result->fetch_all(MYSQLI_ASSOC);
+$orders_result = $stmt->get_result();
+$orders = $orders_result->fetch_all(MYSQLI_ASSOC);
 
-// Fetch scheduled orders with all_at_once delivery
-$scheduled_orders_query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
-                 o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
-                 pd.delivery_fees, pd.total_payment, o.delivery_type, o.customer_selected_date
-          FROM orders o
-          JOIN payment_details pd ON o.order_id = pd.order_id
-          JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
-          WHERE o.customer_id = ? AND o.ord_type = 'scheduled' AND o.delivery_type = 'all_at_once' $status_condition
-          ORDER BY o.order_date DESC";
-$stmt = $conn->prepare($scheduled_orders_query);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$scheduled_orders_result = $stmt->get_result();
-$scheduled_orders = $scheduled_orders_result->fetch_all(MYSQLI_ASSOC);
-
-// Fetch scheduled orders with daily_delivery type and packages presence
-$scheduled_daily_query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
-                 o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
-                 o.delivery_type, o.customer_selected_date
-          FROM orders o
-          JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
-          WHERE o.customer_id = ? AND o.ord_type = 'scheduled' AND o.delivery_type = 'daily_delivery' $status_condition
-          ORDER BY o.order_date DESC";
-$stmt = $conn->prepare($scheduled_daily_query);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$scheduled_daily_result = $stmt->get_result();
-$scheduled_daily_orders = $scheduled_daily_result->fetch_all(MYSQLI_ASSOC);
-
-// Combine all orders
-$orders = array_merge($normal_orders, $scheduled_orders, $scheduled_daily_orders);
-
-// For each order, get items, or packages + review + toggle status
+// For each order, get items/packages + review + toggle status
 foreach ($orders as &$order) {
-    // Scheduled daily_delivery => fetch packages and package meals
-    if (isset($order['delivery_type']) && $order['delivery_type'] === 'daily_delivery') {
-        // Fetch packages
+    if ($order['ord_type'] === 'scheduled' && $order['delivery_type'] === 'daily_delivery') {
+        // Handle daily delivery packages
         $pkg_query = "SELECT p.package_id, p.package_name, p.delivery_date, p.package_price, p.package_status
                       FROM order_packages p
                       WHERE p.order_id = ?
@@ -258,7 +195,6 @@ foreach ($orders as &$order) {
         $packages = [];
         while ($pkg = $pkg_res->fetch_assoc()) {
             $package_id = $pkg['package_id'];
-            // fetch meals in package
             $meals_query = "SELECT m.name, mip.quantity, mip.price 
                             FROM meals_in_each_package mip
                             JOIN meals m ON m.meal_id = mip.meal_id
@@ -272,8 +208,8 @@ foreach ($orders as &$order) {
                 $meals[] = $meal;
             }
             $meals_stmt->close();
-
             $packages[] = [
+                'package_id' => $package_id,
                 'package_name' => $pkg['package_name'],
                 'delivery_date' => $pkg['delivery_date'],
                 'package_price' => $pkg['package_price'],
@@ -283,11 +219,9 @@ foreach ($orders as &$order) {
         }
         $pkg_stmt->close();
         $order['packages'] = $packages;
-
-        // For daily_delivery orders, no normal items list
         $order['items'] = [];
     } else {
-        // normal or scheduled all_at_once orders: fetch items normally
+        // Handle normal orders and all-at-once scheduled orders
         $query = "SELECT m.name, m.photo, oc.quantity, oc.price 
                   FROM order_content oc
                   JOIN meals m ON oc.meal_id = m.meal_id
@@ -299,7 +233,6 @@ foreach ($orders as &$order) {
         $order['items'] = $items_result->fetch_all(MYSQLI_ASSOC);
     }
 
-    // reviews
     $review_query = "SELECT stars FROM reviews WHERE order_id = ?";
     $stmt = $conn->prepare($review_query);
     $stmt->bind_param("i", $order['order_id']);
@@ -311,6 +244,17 @@ foreach ($orders as &$order) {
     
     $order['delivery_type'] = $order['delivery_type'] ?? 'all_at_once';
     $order['customer_selected_date'] = $order['customer_selected_date'] ?? null;
+    
+    // Status mapping for UI classes
+    $status_map = [
+        'pending' => 'preparing',
+        'preparing' => 'preparing',
+        'ready_for_pickup' => 'on-the-way',
+        'in_transit' => 'on-the-way',
+        'delivered' => 'delivered',
+        'cancelled' => 'cancelled'
+    ];
+    $order['status_class'] = $status_map[$order['order_status']] ?? 'preparing';
 }
 unset($order);
 ?>
@@ -322,6 +266,105 @@ unset($order);
 <title>Order Track Connect</title>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+<style>
+/* Minimal modal styling for clarity */
+.modal {
+    position: fixed;
+    top: 0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: white;
+    padding: 1.5rem;
+    max-width: 600px;
+    width: 90%;
+    border-radius: 8px;
+    position: relative;
+}
+.modal-header h2 {
+    margin: 0 0 0.5rem 0;
+}
+.close, .close-btn {
+    position: absolute;
+    top: 0.7rem;
+    right: 1rem;
+    font-size: 1.5rem;
+    text-decoration: none;
+    color: #333;
+}
+.star-rating .star {
+    font-size: 2rem;
+    cursor: pointer;
+    color: #ccc;
+}
+.star-rating .star.active {
+    color: gold;
+}
+
+/* Package styling */
+.package {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+.package-header {
+    padding: 0.75rem 1rem;
+    background: #f9f9f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+.package-header small {
+    font-size: 0.8em;
+    color: #666;
+}
+.package-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+.package.expanded .package-content {
+    max-height: 500px; /* Adjust based on content */
+    padding: 0.5rem 1rem;
+}
+.package-status {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-right: 0.5rem;
+}
+.package-status.preparing {
+    background: #fff3cd;
+    color: #856404;
+}
+.package-status.delivered {
+    background: #d4edda;
+    color: #155724;
+}
+.package-status.cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+.toggle-icon {
+    transition: transform 0.3s ease;
+}
+.package.expanded .toggle-icon {
+    transform: rotate(90deg);
+}
+.package-total {
+    font-weight: bold;
+    text-align: right;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+}
+</style>
 </head>
 <body>
 <?php include '..\global\navbar\navbar.php'; ?>
@@ -336,134 +379,98 @@ unset($order);
     </div>
 
     <div class="orders-list">
-        <?php 
-        $status_map = [
-            'pending' => 'preparing',
-            'preparing' => 'preparing',
-            'ready_for_pickup' => 'on-the-way',
-            'in_transit' => 'on-the-way',
-            'delivered' => 'delivered',
-            'cancelled' => 'cancelled'
-        ];
-        foreach ($orders as $order):
-            $status_class = $status_map[$order['order_status']] ?? 'preparing';
+        <?php foreach ($orders as $order):
             $order_date = new DateTime($order['order_date']);
-            $is_scheduled_all_at_once = isset($order['delivery_type']) && $order['delivery_type'] === 'all_at_once' && isset($order['customer_selected_date']);
-            $is_scheduled_daily = isset($order['delivery_type']) && $order['delivery_type'] === 'daily_delivery';
+            $is_scheduled = $order['ord_type'] === 'scheduled';
+            $is_daily_delivery = $is_scheduled && $order['delivery_type'] === 'daily_delivery';
+            $is_all_at_once = $is_scheduled && $order['delivery_type'] === 'all_at_once';
         ?>
-        <?php if ($is_scheduled_daily): ?>
-            <!-- Order with Packages -->
-            <div class="order-card" data-status="<?php echo $status_class; ?>" data-order-type="scheduled">
-                <div class="order-header">
-                    <div class="restaurant-icon">
-                        <img alt="<?php echo htmlspecialchars($order['kitchen_name']); ?>" src="caterer.jpg" />
-                    </div>
-                    <div class="order-info">
-                        <h3><?php echo htmlspecialchars($order['kitchen_name']); ?> <span class="order-time"> • <?php echo $order_date->format('M j, Y'); ?> • <?php echo $order_date->format('g:i A'); ?></span> <span class="order-type">Scheduled</span></h3>
-                        <p class="order-id">Order ID: <?php echo $order['order_id']; ?></p>
-                        <p class="delivery-type">Delivery Type: Daily</p>
-                        <div class="packages-list">
-                            <?php foreach ($order['packages'] as $idx => $package): 
-                                $pkg_status_class = $status_map[$package['package_status']] ?? $package['package_status'];
-                                $pkg_delivery_date = (new DateTime($package['delivery_date']))->format('M j, Y');
-                            ?>
-                            <div class="package" data-package-status="<?php echo htmlspecialchars($pkg_status_class); ?>">
-                                <div class="package-header" onclick="togglePackageDropdown(event)">
-                                    <div class="package-info">
-                                        <span class="package-title"><?php echo htmlspecialchars($package['package_name']); ?> • Delivery Date Should be: <?php echo $pkg_delivery_date; ?></span>
-                                    </div>
-                                    <div class="package-controls">
-                                        <span class="package-status <?php echo htmlspecialchars($pkg_status_class); ?>"><?php echo ucwords(str_replace('-', ' ', $pkg_status_class)); ?></span>
-                                        <button class="package-toggle" aria-label="Toggle package items">
-                                            <i class="fas fa-chevron-down"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="package-items">
-                                    <?php foreach ($package['items'] as $item): ?>
-                                    <div class="item-preview">
-                                        <span class="item-name"><?php echo htmlspecialchars($item['quantity'] . 'x ' . $item['name']); ?></span>
-                                        <span class="item-price">EGP <?php echo number_format(floatval(str_replace('EGP ', '', $item['price'])), 2); ?></span>
-                                    </div>
-                                    <?php endforeach; ?>
-                                    <div class="package-total">
-                                        <strong>Package Total: EGP <?php echo number_format($package['package_price'], 2); ?></strong>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <div class="status-wrap">
-                        <div class="status-badge <?php echo $status_class; ?>">
-                            <?php 
-                            echo ucwords(str_replace('-', ' ', $status_class));
-                            if ($status_class == 'on-the-way') echo ' (In Transit)';
-                            ?>
-                        </div>
-                    </div>
+        <div class="order-card" data-status="<?php echo $order['status_class']; ?>" data-order-type="<?php echo $is_scheduled ? 'scheduled' : 'normal'; ?>">
+            <div class="order-header">
+                <div class="restaurant-icon">
+                    <img alt="<?php echo htmlspecialchars($order['kitchen_name']); ?>" src="caterer.jpg" />
                 </div>
-                <div class="order-actions">
-                    <a href="?view_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-secondary">View Details</a>
-                </div>
-            </div>
-        <?php else: ?>
-            <!-- Normal or all_at_once scheduled orders -->
-            <div class="order-card" data-status="<?php echo $status_class; ?>" data-order-type="<?php echo $is_scheduled_all_at_once ? 'scheduled' : 'normal'; ?>">
-                <div class="order-header">
-                    <div class="restaurant-icon">
-                        <img alt="<?php echo htmlspecialchars($order['kitchen_name']); ?>" src="caterer.jpg" />
-                    </div>
-                    <div class="order-info">
-                        <h3><?php echo htmlspecialchars($order['kitchen_name']); ?> 
-                            <span class="order-time"> • <?php echo $order_date->format('M j, Y'); ?> • <?php echo $order_date->format('g:i A'); ?></span> 
-                            <?php if ($is_scheduled_all_at_once): ?>
-                                <span class="order-type">Scheduled</span></h3>
-                                <p class="order-id">Order ID: <?php echo $order['order_id']; ?></p>
-                                <p class="delivery-type">Delivery Type: All at once</p>
-                                <?php if ($order['customer_selected_date']): ?>
-                                    <?php $delivery_date = new DateTime($order['customer_selected_date']); ?>
-                                    <p class="delivery-date">Delivery Date Should be: <?php echo $delivery_date->format('M j, Y'); ?></p>
-                                <?php endif; ?>
-                            <?php else: ?>
-                                <span class="order-type">Normal</span></h3>
-                                <p class="order-id">Order ID: <?php echo $order['order_id']; ?></p>
+                <div class="order-info">
+                    <h3><?php echo htmlspecialchars($order['kitchen_name']); ?> 
+                        <span class="order-time"> • <?php echo $order_date->format('M j, Y'); ?> • <?php echo $order_date->format('g:i A'); ?></span> 
+                        <?php if ($is_scheduled): ?>
+                            <span class="order-type">Scheduled</span></h3>
+                            <p class="order-id">Order ID: <?php echo $order['order_id']; ?></p>
+                            <p class="delivery-type">Delivery Type: <?php echo $is_daily_delivery ? 'Daily Delivery' : 'All at once'; ?></p>
+                            <?php if ($order['customer_selected_date']): ?>
+                                <?php $delivery_date = new DateTime($order['customer_selected_date']); ?>
+                                <p class="delivery-date">Delivery Date Should be: <?php echo $delivery_date->format('M j, Y'); ?></p>
                             <?php endif; ?>
-                        <div class="items-list <?php echo $order['show_items'] ? 'show' : ''; ?>">
+                        <?php else: ?>
+                            <span class="order-type">Normal</span></h3>
+                            <p class="order-id">Order ID: <?php echo $order['order_id']; ?></p>
+                        <?php endif; ?>
+                    
+                    <div class="items-list <?php echo $order['show_items'] ? 'show' : ''; ?>">
+                        <?php if ($is_daily_delivery): ?>
+                            <div class="packages-list">
+                                <?php foreach ($order['packages'] as $package): ?>
+                                <div class="package" role="group" tabindex="0" aria-expanded="false" aria-label="Package <?php echo htmlspecialchars($package['package_name']); ?>, delivery date <?php echo (new DateTime($package['delivery_date']))->format('F j, Y'); ?>">
+                                    <div class="package-header">
+                                        <span><?php echo htmlspecialchars($package['package_name']); ?> <small>(Delivery: <?php echo (new DateTime($package['delivery_date']))->format('F j, Y'); ?>)</small></span>
+                                        <span>
+                                            <span class="package-status <?php echo htmlspecialchars($package['package_status']); ?>"><?php echo ucwords(str_replace('-', ' ', $package['package_status'])); ?></span>
+                                            <i class="fas fa-chevron-right toggle-icon" aria-hidden="true"></i>
+                                        </span>
+                                    </div>
+                                    <div class="package-content">
+                                        <?php foreach ($package['items'] as $item): ?>
+                                            <div class="item-preview">
+                                                <span><?php echo htmlspecialchars($item['quantity'] . 'x ' . $item['name']); ?></span>
+                                                <span>EGP <?php echo number_format(floatval(str_replace('EGP ', '', $item['price'])), 2); ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                        <div class="package-total">Package Total: EGP <?php echo number_format($package['package_price'], 2); ?></div>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
                             <?php foreach ($order['items'] as $item): ?>
                             <div class="item-preview">
                                 <span class="item-name"><?php echo $item['quantity']; ?>x <?php echo htmlspecialchars($item['name']); ?></span>
                                 <span class="item-price">EGP <?php echo number_format($item['price'], 2); ?></span>
                             </div>
                             <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <div class="status-wrap">
-                        <div class="status-badge <?php echo $status_class; ?>">
-                            <?php 
-                            echo ucwords(str_replace('-', ' ', $status_class));
-                            if ($status_class == 'on-the-way') echo ' (In Transit)';
-                            ?>
-                        </div>
-                        <?php if ($order['show_items']): ?>
-                            <a href="?hide_items=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="items-toggle active"><?php echo count($order['items']); ?> items <i class="fas fa-chevron-up"></i></a>
-                        <?php else: ?>
-                            <a href="?show_items=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="items-toggle"><?php echo count($order['items']); ?> items <i class="fas fa-chevron-down"></i></a>
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="order-actions <?php echo $status_class == 'delivered' ? 'delivered-actions' : ''; ?>">
-                    <a href="?view_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-secondary <?php echo $status_class == 'delivered' ? 'small' : ''; ?>">View Details</a>
-                    <?php if ($status_class == 'delivered'): ?>
-                        <?php if ($order['review']): ?>
-                            <div class="rated-badge"><span>Rated: <?php echo $order['review']['stars']; ?>&#9733;</span></div>
-                        <?php else: ?>
-                            <a href="?rate_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-primary">Rate Order</a>
-                        <?php endif; ?>
+                <div class="status-wrap">
+                    <div class="status-badge <?php echo $order['status_class']; ?>">
+                        <?php 
+                        echo ucwords(str_replace('-', ' ', $order['status_class']));
+                        if ($order['status_class'] == 'on-the-way') echo ' (In Transit)';
+                        ?>
+                    </div>
+                    <?php if ($order['show_items']): ?>
+                        <a href="?hide_items=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="items-toggle active">
+                            <?php echo $is_daily_delivery ? count($order['packages']) . ' packages' : count($order['items']) . ' items'; ?> 
+                            <i class="fas fa-chevron-up"></i>
+                        </a>
+                    <?php else: ?>
+                        <a href="?show_items=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="items-toggle">
+                            <?php echo $is_daily_delivery ? count($order['packages']) . ' packages' : count($order['items']) . ' items'; ?> 
+                            <i class="fas fa-chevron-down"></i>
+                        </a>
                     <?php endif; ?>
                 </div>
             </div>
-        <?php endif; ?>
+            <div class="order-actions <?php echo $order['status_class'] == 'delivered' ? 'delivered-actions' : ''; ?>">
+                <a href="?view_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-secondary <?php echo $order['status_class'] == 'delivered' ? 'small' : ''; ?>">View Details</a>
+                <?php if ($order['status_class'] == 'delivered'): ?>
+                    <?php if ($order['review']): ?>
+                        <div class="rated-badge"><span>Rated: <?php echo $order['review']['stars']; ?>&#9733;</span></div>
+                    <?php else: ?>
+                        <a href="?rate_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-primary">Rate Order</a>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
         <?php endforeach; ?>
     </div>
 </div>
@@ -471,7 +478,7 @@ unset($order);
 <!-- Order Details Modal -->
 <?php if ($show_order_details && $order_details): ?>
 <div class="modal" role="dialog" aria-modal="true" aria-labelledby="orderDetailsTitle">
-    <div class="modal-content" style="max-height:85vh; overflow-y:auto;">
+    <div class="modal-content">
         <div class="modal-header">
             <h2 id="orderDetailsTitle">Order Details</h2>
             <a href="?<?php echo $filter !== 'all' ? 'filter='.$filter : ''; ?>" aria-label="Close modal" class="close">&times;</a>
@@ -489,67 +496,60 @@ unset($order);
                 </div>
             </div>
 
-            <?php if (isset($order_details['delivery_type']) && $order_details['delivery_type'] === 'all_at_once' && isset($order_details['customer_selected_date'])): ?>
+            <?php if ($order_details['ord_type'] === 'scheduled'): ?>
                 <div class="delivery-info">
                     <h3>Delivery Information</h3>
                     <div class="info-item">
                         <span class="icon" aria-hidden="true"><i class="fas fa-truck"></i></span>
-                        <span>Delivery Type: All at once</span>
+                        <span>Delivery Type: <?php echo $order_details['delivery_type'] === 'daily_delivery' ? 'Daily Delivery' : 'All at once'; ?></span>
                     </div>
-                    <div class="info-item">
-                        <span class="icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
-                        <span>Scheduled Delivery Date: <?php echo (new DateTime($order_details['customer_selected_date']))->format('M j, Y'); ?></span>
-                    </div>
+                    <?php if ($order_details['customer_selected_date']): ?>
+                        <div class="info-item">
+                            <span class="icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
+                            <span>Scheduled Delivery Date: <?php echo (new DateTime($order_details['customer_selected_date']))->format('M j, Y'); ?></span>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
-            <?php if (isset($order_details['delivery_type']) && $order_details['delivery_type'] === 'daily_delivery'): ?>
+            <div class="delivery-person" id="deliveryPersonSection" style="<?php echo ($order_details['order_status'] === 'ready_for_pickup' || $order_details['order_status'] === 'in_transit') ? 'display:block;' : 'display:none;'; ?>">
+                <h3>Delivery Person</h3>
                 <div class="delivery-info">
-                    <h3>Delivery Information</h3>
-                    <div class="info-item">
-                        <span class="icon" aria-hidden="true"><i class="fas fa-truck"></i></span>
-                        <span>Delivery Type: Daily</span>
-                    </div>
+                    <div class="delivery-avatar" aria-hidden="true">AH</div>
+                    <span class="delivery-name">Ahmed Hassan</span>
+                    <a href="tel:<?php echo htmlspecialchars($phone); ?>" class="call-btn" aria-label="Call delivery person"><i class="fas fa-phone"></i> Call</a>
                 </div>
-                <div class="packages-list">
-                    <?php foreach ($order_details['packages'] as $package): 
-                        $pkg_status_class = $status_map[$package['package_status']] ?? $package['package_status'];
-                        $pkg_delivery_date = (new DateTime($package['delivery_date']))->format('M j, Y');
-                    ?>
-                    <div class="package" data-package-status="<?php echo htmlspecialchars($pkg_status_class); ?>">
+            </div>
+
+            <div class="order-items">
+                <h3>Order Items</h3>
+                <?php if ($order_details['ord_type'] === 'scheduled' && $order_details['delivery_type'] === 'daily_delivery'): ?>
+                    <?php foreach ($order_details['packages'] as $package): ?>
+                    <div class="package">
                         <div class="package-header">
-                            <div class="package-info">
-                                <span class="package-title"><?php echo htmlspecialchars($package['package_name']); ?> • Delivery Date Should be: <?php echo $pkg_delivery_date; ?></span>
-                            </div>
-                            <div class="package-controls">
-                                <span class="package-status <?php echo htmlspecialchars($pkg_status_class); ?>"><?php echo ucwords(str_replace('-', ' ', $pkg_status_class)); ?></span>
-                            </div>
+                            <strong><?php echo htmlspecialchars($package['package_name']); ?></strong>
+                            <span>Delivery: <?php echo (new DateTime($package['delivery_date']))->format('M j, Y'); ?></span>
                         </div>
-                        <div class="package-items show">
+                        <div class="package-content">
                             <?php foreach ($package['items'] as $item): ?>
-                            <div class="item-preview">
-                                <span class="item-name"><?php echo htmlspecialchars($item['quantity'] . 'x ' . $item['name']); ?></span>
-                                <span class="item-price">EGP <?php echo number_format(floatval(str_replace('EGP ', '', $item['price'])), 2); ?></span>
+                            <div class="item">
+                                <span class="item-name"><?php echo $item['quantity']; ?>x <?php echo htmlspecialchars($item['name']); ?></span>
+                                <span class="item-price">EGP <?php echo number_format($item['price'], 2); ?></span>
                             </div>
                             <?php endforeach; ?>
-                            <div class="package-total">
-                                <strong>Package Total: EGP <?php echo number_format($package['package_price'], 2); ?></strong>
-                            </div>
+                            <div class="package-total">Package Total: EGP <?php echo number_format($package['package_price'], 2); ?></div>
                         </div>
                     </div>
                     <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <div class="order-items">
-                    <h3>Order Items</h3>
+                <?php else: ?>
                     <?php foreach ($order_details['items'] as $item): ?>
                     <div class="item">
                         <span class="item-name"><?php echo $item['quantity']; ?>x <?php echo htmlspecialchars($item['name']); ?></span>
                         <span class="item-price">EGP <?php echo number_format($item['price'], 2); ?></span>
                     </div>
                     <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+                <?php endif; ?>
+            </div>
 
             <div class="payment-summary">
                 <h3>Payment Summary</h3>
@@ -557,21 +557,14 @@ unset($order);
                     <span>Subtotal</span>
                     <span id="subtotal">EGP <?php echo number_format($order_details['total_price'], 2); ?></span>
                 </div>
-                <?php if ($order_details['delivery_type'] === 'all_at_once'): ?>
-                    <div class="summary-item">
-                        <span>Delivery Fee</span>
-                        <span id="deliveryFee">EGP <?php echo number_format($order_details['delivery_fees'], 2); ?></span>
-                    </div>
-                    <div class="summary-item total">
-                        <span>Total</span>
-                        <span id="total">EGP <?php echo number_format($order_details['total_payment'], 2); ?></span>
-                    </div>
-                <?php elseif ($order_details['delivery_type'] === 'daily_delivery'): ?>
-                    <div class="summary-item total">
-                        <span>Total</span>
-                        <span id="total">EGP <?php echo number_format($order_details['total_price'], 2); ?></span>
-                    </div>
-                <?php endif; ?>
+                <div class="summary-item">
+                    <span>Delivery Fee</span>
+                    <span id="deliveryFee">EGP <?php echo number_format($order_details['delivery_fees'], 2); ?></span>
+                </div>
+                <div class="summary-item total">
+                    <span>Total</span>
+                    <span id="total">EGP <?php echo number_format($order_details['total_payment'], 2); ?></span>
+                </div>
             </div>
         </div>
     </div>
@@ -634,24 +627,41 @@ function setRating(value) {
     });
 }
 
-// Toggle package dropdown items display
-function togglePackageDropdown(event) {
-    const header = event.currentTarget.closest('.package-header');
-    if (!header) return;
-    const packageDiv = header.parentElement;
-    if (!packageDiv) return;
-    const itemsDiv = packageDiv.querySelector('.package-items');
-    const toggleIcon = header.querySelector('.package-toggle i');
-    if (!itemsDiv) return;
+// Package expand/collapse functionality
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.package').forEach(pkg => {
+        const header = pkg.querySelector('.package-header');
+        const content = pkg.querySelector('.package-content');
+        const icon = pkg.querySelector('.toggle-icon');
 
-    if (itemsDiv.classList.contains('show')) {
-        itemsDiv.classList.remove('show');
-        if(toggleIcon) toggleIcon.classList.replace('fa-chevron-up', 'fa-chevron-down');
-    } else {
-        itemsDiv.classList.add('show');
-        if(toggleIcon) toggleIcon.classList.replace('fa-chevron-down', 'fa-chevron-up');
-    }
-}
+        // Initialize collapsed state
+        content.style.maxHeight = null;
+        pkg.classList.remove('expanded');
+        pkg.setAttribute('aria-expanded', 'false');
+        icon.style.transform = 'rotate(0deg)';
+    
+        function togglePackage() {
+            const isExpanded = pkg.classList.toggle('expanded');
+            if (isExpanded) {
+                content.style.maxHeight = content.scrollHeight + 'px';
+                pkg.setAttribute('aria-expanded', 'true');
+                icon.style.transform = 'rotate(90deg)';
+            } else {
+                content.style.maxHeight = null;
+                pkg.setAttribute('aria-expanded', 'false');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        header.addEventListener('click', togglePackage);
+        pkg.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                togglePackage();
+            }
+        });
+    });
+});
 </script>
 </body>
 </html>
