@@ -135,6 +135,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtP->execute();
             $stmtP->close();
 
+            // Insert placeholder review row (stars set to 0 for now)
+$placeholderStars = 0;
+$insertReviewQuery = "INSERT INTO reviews (stars, order_id, cloud_kitchen_id, customer_id) 
+                      VALUES (?, ?, ?, ?)";
+$stmtR = $conn->prepare($insertReviewQuery);
+$stmtR->bind_param("iiii", $placeholderStars, $orderId, $cloudKitchenId, $userId);
+$stmtR->execute();
+$stmtR->close();
+
+// Increment orders_count for cloud kitchen owner
+        $updateKitchenOwnerQuery = "UPDATE cloud_kitchen_owner SET orders_count = orders_count + 1 WHERE user_id = ?";
+        $stmtUpdateOwner = $conn->prepare($updateKitchenOwnerQuery);
+        $stmtUpdateOwner->bind_param("i", $cloudKitchenId);
+        $stmtUpdateOwner->execute();
+        $stmtUpdateOwner->close();
+
+
             // Delete cart items
             $deleteCartItemsQuery = "DELETE FROM cart_items WHERE cart_id = ?";
             $stmtDeleteItems = $conn->prepare($deleteCartItemsQuery);

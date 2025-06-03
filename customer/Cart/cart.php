@@ -228,18 +228,7 @@ if ($cartsResult && mysqli_num_rows($cartsResult) > 0) {
                     </div>
                     
                     <div class="group-summary">
-                        <div class="summary-row">
-                            <span>Subtotal</span>
-                            <span><?= number_format($cartData['subtotal'], 2) ?> EGP</span>
-                        </div>
-                        <div class="summary-row">
-                            <span>VAT (14%)</span>
-                            <span><?= number_format($cartData['vat'], 2) ?> EGP</span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Delivery Fee</span>
-                            <span><?= number_format($cartData['deliveryFee'], 2) ?> EGP</span>
-                        </div>
+                        
                         <div class="group-total-row">
                             <div class="summary-row">
                                 <span>Group Total</span>

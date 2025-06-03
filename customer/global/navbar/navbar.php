@@ -20,9 +20,9 @@
                 <span class="nav-icon cart"></span>
                 <span class="nav-text">Cart</span>
             </a>
-            <a href="\NEW-TODAYS-MEAL\customer\Show_Caterers\index.php" class="nav-item">
+            <a href="\NEW-TODAYS-MEAL\customer\Order_tracking\index.php" class="nav-item">
                 <span class="nav-icon meals"></span>
-                <span class="nav-text">Order</span>
+                <span class="nav-text">My Orders</span>
             </a>
             <a href="../support/support.php" class="nav-item">
                 <span class="nav-icon support"></span>
@@ -430,7 +430,7 @@ body {
   height: 64px;
   padding: 0 55px;
   background-color: #af5214;
-  margin-bottom: 24px;
+  margin-bottom: 45px;
 }
 
 .logo {

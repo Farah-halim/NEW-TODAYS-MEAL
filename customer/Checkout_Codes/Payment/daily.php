@@ -165,6 +165,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place-order'])) {
             $orderId = $conn->insert_id;
             $stmt->close();
 
+            $cloudKitchenId = $cloudKitchenRow['cloud_kitchen_id']; 
+
+$updateKitchenOwnerQuery = "UPDATE cloud_kitchen_owner SET orders_count = orders_count + 1 WHERE user_id = ?";
+$stmtUpdateOwner = $conn->prepare($updateKitchenOwnerQuery);
+$stmtUpdateOwner->bind_param("i", $cloudKitchenId);
+$stmtUpdateOwner->execute();
+$stmtUpdateOwner->close();
+
+
             // Insert order_packages using the exact delivery_date the customer selected!
             $packageCounter = 1;
             foreach ($orderPackages as $day => $package) {

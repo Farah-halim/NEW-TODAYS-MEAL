@@ -120,60 +120,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place-order'])) {
     $stmt->close();
 
     // Insert order
-    if (empty($errors)) {
-        $insertOrderQuery = "INSERT INTO orders (customer_id, cloud_kitchen_id, total_price, ord_type, delivery_type, customer_selected_date, delivery_zone) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($insertOrderQuery);
-        $stmt->bind_param("iiissss", $userId, $cloudKitchenId, $total, $orderType, $deliveryType, $deliveryDate, $deliveryZone);
+    // Insert order
+if (empty($errors)) {
+    $insertOrderQuery = "INSERT INTO orders (customer_id, cloud_kitchen_id, total_price, ord_type, delivery_type, customer_selected_date, delivery_zone) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $conn->prepare($insertOrderQuery);
+    $stmt->bind_param("iiissss", $userId, $cloudKitchenId, $total, $orderType, $deliveryType, $deliveryDate, $deliveryZone);
 
-        if ($stmt->execute()) {
-            $orderId = $stmt->insert_id;
+    if ($stmt->execute()) {
+        $orderId = $stmt->insert_id;
 
-            // Insert order items
-            foreach ($cartItems as $item) {
-                $insertOrderContentQuery = "INSERT INTO order_content (order_id, meal_id, quantity, price) VALUES (?, ?, ?, ?)";
-                $stmtOC = $conn->prepare($insertOrderContentQuery);
-                $stmtOC->bind_param("iiid", $orderId, $item['meal_id'], $item['quantity'], $item['price']);
-                $stmtOC->execute();
-                $stmtOC->close();
-            }
-
-            // Insert payment details
-            $websiteRevenue = 0; // Assuming no revenue in this case
-            $insertPaymentQuery = "INSERT INTO payment_details (order_id, total_ord_price, delivery_fees, website_revenue, total_payment, p_date_time, p_method) 
-                                   VALUES (?, ?, ?, ?, ?, NOW(), ?)";
-            $stmtP = $conn->prepare($insertPaymentQuery);
-            $stmtP->bind_param("iddiss", $orderId, $subtotal, $deliveryFees, $websiteRevenue, $total, $paymentMethod);
-            $stmtP->execute();
-            $stmtP->close();
-
-            // Clear cart items and session variables
-           
-            $deleteCartItemsQuery = "DELETE FROM cart_items WHERE cart_id = ?";
-            $stmtDeleteItems = $conn->prepare($deleteCartItemsQuery);
-            $stmtDeleteItems->bind_param("i", $_SESSION['cart_id']);
-            $stmtDeleteItems->execute();
-            $stmtDeleteItems->close();
-
-            // Delete cart record
-            $deleteCartQuery = "DELETE FROM cart WHERE cart_id = ?";
-            $stmtDeleteCart = $conn->prepare($deleteCartQuery);
-            $stmtDeleteCart->bind_param("i", $_SESSION['cart_id']);
-            $stmtDeleteCart->execute();
-            $stmtDeleteCart->close();
-
-            // Clear session
-            unset($_SESSION['cart_id']);
-            unset($_SESSION['order_data']);
-
-            $_SESSION['order_success'] = true;
-            $_SESSION['order_id'] = $orderId;
-            header("Location: ..\..\Cart\cart.php");
-            exit();
-        } else {
-            $errors[] = "Failed to create order. Please try again.";
+        // Insert order items
+        foreach ($cartItems as $item) {
+            $insertOrderContentQuery = "INSERT INTO order_content (order_id, meal_id, quantity, price) VALUES (?, ?, ?, ?)";
+            $stmtOC = $conn->prepare($insertOrderContentQuery);
+            $stmtOC->bind_param("iiid", $orderId, $item['meal_id'], $item['quantity'], $item['price']);
+            $stmtOC->execute();
+            $stmtOC->close();
         }
+
+        // Insert payment details
+        $websiteRevenue = 0; // Assuming no revenue in this case
+        $insertPaymentQuery = "INSERT INTO payment_details (order_id, total_ord_price, delivery_fees, website_revenue, total_payment, p_date_time, p_method) 
+                               VALUES (?, ?, ?, ?, ?, NOW(), ?)";
+        $stmtP = $conn->prepare($insertPaymentQuery);
+        $stmtP->bind_param("iddiss", $orderId, $subtotal, $deliveryFees, $websiteRevenue, $total, $paymentMethod);
+        $stmtP->execute();
+        $stmtP->close();
+
+        // Insert placeholder review row (stars set to 0 for now)
+        $placeholderStars = 0;
+        $insertReviewQuery = "INSERT INTO reviews (stars, order_id, cloud_kitchen_id, customer_id) 
+                              VALUES (?, ?, ?, ?)";
+        $stmtR = $conn->prepare($insertReviewQuery);
+        $stmtR->bind_param("iiii", $placeholderStars, $orderId, $cloudKitchenId, $userId);
+        $stmtR->execute();
+        $stmtR->close();
+
+        // Increment orders_count for cloud kitchen owner
+        $updateKitchenOwnerQuery = "UPDATE cloud_kitchen_owner SET orders_count = orders_count + 1 WHERE user_id = ?";
+        $stmtUpdateOwner = $conn->prepare($updateKitchenOwnerQuery);
+        $stmtUpdateOwner->bind_param("i", $cloudKitchenId);
+        $stmtUpdateOwner->execute();
+        $stmtUpdateOwner->close();
+
+        // Clear cart items and session variables
+        $deleteCartItemsQuery = "DELETE FROM cart_items WHERE cart_id = ?";
+        $stmtDeleteItems = $conn->prepare($deleteCartItemsQuery);
+        $stmtDeleteItems->bind_param("i", $_SESSION['cart_id']);
+        $stmtDeleteItems->execute();
+        $stmtDeleteItems->close();
+
+        // Delete cart record
+        $deleteCartQuery = "DELETE FROM cart WHERE cart_id = ?";
+        $stmtDeleteCart = $conn->prepare($deleteCartQuery);
+        $stmtDeleteCart->bind_param("i", $_SESSION['cart_id']);
+        $stmtDeleteCart->execute();
+        $stmtDeleteCart->close();
+
+        // Clear session
+        unset($_SESSION['cart_id']);
+        unset($_SESSION['order_data']);
+
+        $_SESSION['order_success'] = true;
+        $_SESSION['order_id'] = $orderId;
+        header("Location: ..\..\Cart\cart.php");
+        exit();
+    } else {
+        $errors[] = "Failed to create order. Please try again.";
     }
+}
+
 }
 ?>
 

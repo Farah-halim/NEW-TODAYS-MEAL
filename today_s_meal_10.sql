@@ -69,15 +69,6 @@ CREATE TABLE delivery_man (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- Cloud Kitchen Specialist Category
-CREATE TABLE cloud_kitchen_specialist_category (
-    cloud_kitchen_id INT NOT NULL,
-    cat_id INT NOT NULL,
-    PRIMARY KEY (cloud_kitchen_id, cat_id),
-    FOREIGN KEY (cloud_kitchen_id) REFERENCES cloud_kitchen_owner(user_id),
-    FOREIGN KEY (cat_id) REFERENCES category(cat_id)
-);
-
 -- Category
 CREATE TABLE category (
     cat_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -110,6 +101,15 @@ CREATE TABLE caterer_tags (
     tag_id INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES cloud_kitchen_owner (user_id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES dietary_tags (tag_id) ON DELETE CASCADE
+);
+
+-- Cloud Kitchen Specialist Category
+CREATE TABLE cloud_kitchen_specialist_category (
+    cloud_kitchen_id INT NOT NULL,
+    cat_id INT NOT NULL,
+    PRIMARY KEY (cloud_kitchen_id, cat_id),
+    FOREIGN KEY (cloud_kitchen_id) REFERENCES cloud_kitchen_owner(user_id),
+    FOREIGN KEY (cat_id) REFERENCES category(cat_id)
 );
 
 -- Meals
@@ -151,25 +151,6 @@ CREATE TABLE meal_subcategory (
     FOREIGN KEY (subcat_id) REFERENCES sub_category(subcat_id)
 );
 
-CREATE TABLE cart (
-    cart_id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT NOT NULL,
-    cloud_kitchen_id INT NOT NULL,  
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customer(user_id),
-    FOREIGN KEY (cloud_kitchen_id) REFERENCES cloud_kitchen_owner(user_id)
-);
-
-CREATE TABLE cart_items (
-    cart_item_id INT PRIMARY KEY AUTO_INCREMENT,
-    cart_id INT NOT NULL,
-    meal_id INT NOT NULL,
-    quantity INT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (cart_id) REFERENCES cart(cart_id),
-    FOREIGN KEY (meal_id) REFERENCES meals(meal_id)
-);
-
 -- Orders
 CREATE TABLE orders (
     order_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -181,7 +162,8 @@ CREATE TABLE orders (
     delivery_type ENUM('all_at_once', 'daily_delivery') DEFAULT NULL,
     delivery_date TIMESTAMP NULL,
     delivery_zone VARCHAR(255) NOT NULL,
-    order_status ENUM('pending', 'preparing', 'ready_for_pickup', 'in_transit', 'delivered', 'cancelled') DEFAULT 'pending';
+    order_status ENUM('pending', 'preparing', 'ready_for_pickup', 'in_transit', 'delivered', 'cancelled') DEFAULT 'pending',
+    customer_selected_date DATE NULL,
     FOREIGN KEY (customer_id) REFERENCES customer(user_id),
     FOREIGN KEY (cloud_kitchen_id) REFERENCES cloud_kitchen_owner(user_id)
 );
@@ -198,8 +180,9 @@ CREATE TABLE customized_order (
     ord_description TEXT NOT NULL,
     img_reference VARCHAR(255) DEFAULT NULL,
     people_servings INT NOT NULL,
-    preferred_completion_date DATE NOT NULL,
+    preferred_completion_date DATETIME NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    customer_approval ENUM('approved', 'rejected', 'pending') DEFAULT 'pending',
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
     FOREIGN KEY (customer_id) REFERENCES customer(user_id) ON DELETE CASCADE,
     FOREIGN KEY (kitchen_id) REFERENCES cloud_kitchen_owner(user_id) ON DELETE CASCADE
@@ -223,6 +206,8 @@ CREATE TABLE order_packages (
     package_name VARCHAR(255) NOT NULL,
     delivery_date DATE NOT NULL,
     package_price DECIMAL(10,2) NOT NULL,
+    package_status ENUM('pending', 'preparing', 'ready_for_pickup', 'in_transit', 'delivered', 'cancelled') DEFAULT 'pending',
+    payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
 );
 
@@ -259,6 +244,7 @@ CREATE TABLE payment_details (
     total_payment DECIMAL(10,2) NOT NULL,
     p_date_time DATETIME NOT NULL,
     p_method ENUM('cash', 'visa') NOT NULL,
+    payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
 );
 
@@ -281,8 +267,8 @@ CREATE TABLE complaints (
     subject VARCHAR(255) DEFAULT NULL,
     message TEXT DEFAULT NULL,
     status ENUM('pending','resolved') DEFAULT 'pending',
-    `customer_id` int(11) DEFAULT NULL,
-  `kitchen_id` int(11) DEFAULT NULL,
+    customer_id INT DEFAULT NULL,
+    kitchen_id INT DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     resolved_at TIMESTAMP NULL DEFAULT NULL,
     FOREIGN KEY (customer_id) REFERENCES customer(user_id) ON DELETE SET NULL,
@@ -301,3 +287,22 @@ CREATE TABLE delivery_subscriptions (
     FOREIGN KEY (customer_id) REFERENCES customer(user_id) ON DELETE CASCADE
 );
 
+-- Cart
+CREATE TABLE cart (
+    cart_id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    cloud_kitchen_id INT NOT NULL,  
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customer(user_id),
+    FOREIGN KEY (cloud_kitchen_id) REFERENCES cloud_kitchen_owner(user_id)
+);
+
+CREATE TABLE cart_items (
+    cart_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    cart_id INT NOT NULL,
+    meal_id INT NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (cart_id) REFERENCES cart(cart_id),
+    FOREIGN KEY (meal_id) REFERENCES meals(meal_id)
+);

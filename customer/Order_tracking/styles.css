@@ -33,6 +33,7 @@ body {
   font-weight:500;
   transition:all 0.2s ease;
   white-space:nowrap;
+  text-decoration: none;
   min-width:fit-content}
 
 .tab-btn:hover {
@@ -93,7 +94,31 @@ body {
 .order-id {
   font-size:14px;
   color:#666;
-  margin-bottom:4px}
+  margin:4px 0;
+  font-weight:400}
+
+.delivery-type {
+  font-size:14px;
+  color:#8f5936;
+  margin:4px 0;
+  font-weight:500}
+
+.delivery-date {
+  font-size:14px;
+  color:#8f5936;
+  margin:4px 0;
+  font-weight:500}
+
+.delivery-date-header {
+  margin-bottom:16px;
+  padding-bottom:8px;
+  border-bottom:1px solid #eee}
+
+.delivery-date-header h4 {
+  margin:0;
+  color:#8f5936;
+  font-size:16px;
+  font-weight:500}
 
 .order-time {
   font-size:14px;
@@ -200,16 +225,13 @@ body {
   border:none;
   font-size:24px;
   cursor:pointer;
-  color:#666;
+  color:#333;
   padding:0;
   width:30px;
   height:30px;
   display:flex;
   align-items:center;
   justify-content:center}
-
-.close {
-  color:#333}
 
 .modal-body {
   padding:24px}
@@ -309,6 +331,43 @@ body {
   font-size:16px;
   color:#333}
 
+.package-section {
+  margin:16px 0;
+  padding:12px 0;
+  border-bottom:1px solid #f0f0f0}
+
+.package-title {
+  font-size:16px;
+  font-weight:600;
+  color:#333;
+  margin-bottom:4px}
+
+.package-delivery-date {
+  font-size:13px;
+  color:#8f5936;
+  font-weight:500;
+  margin-bottom:12px}
+
+.package-item {
+  margin-left:16px;
+  padding:6px 0;
+  border-bottom:1px solid #f8f9fa}
+
+.package-item:last-of-type {
+  border-bottom:none}
+
+.package-total-display {
+  margin:12px 0 0 16px;
+  padding:8px 0;
+  border-top:1px solid #e0e0e0;
+  font-size:14px;
+  color:#333}
+
+.package-separator {
+  height:1px;
+  background-color:#e0e0e0;
+  margin:20px 0}
+
 .rating-modal {
   max-width:400px}
 
@@ -332,7 +391,7 @@ body {
 
 .star {
   font-size:32px;
-  color:#ddd;
+  color:#FDD835;;
   cursor:pointer;
   transition:color 0.2s ease}
 
@@ -445,9 +504,96 @@ body {
 .item-preview .item-name {
   color:#333}
 
-.item-preview .item-price {
+.item-price {
   color:#333;
   font-weight:600}
+
+.package {
+  margin-bottom:12px;
+  border:1px solid #eee;
+  border-radius:6px;
+  overflow:hidden}
+
+.package-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 12px;
+  background-color:#f8f9fa;
+  border-bottom:1px solid #eee;
+  cursor:pointer}
+
+.package-info {
+  display:flex;
+  flex-direction:column;
+  gap:4px}
+
+.package-controls {
+  display:flex;
+  align-items:center;
+  gap:12px}
+
+.package-title {
+  font-weight:600;
+  font-size:14px;
+  color:#333;
+  line-height:1.4}
+
+.package-status {
+  padding:4px 8px;
+  border-radius:12px;
+  font-size:10px;
+  font-weight:500;
+  text-align:center}
+
+.package-status.preparing {
+  background-color:#fff3cd;
+  color:#856404}
+
+.package-status.on-the-way {
+  background-color:#cce5ff;
+  color:#004085}
+
+.package-status.delivered {
+  background-color:#d4edda;
+  color:#155724}
+
+.package-toggle {
+  background:none;
+  border:none;
+  color:#8f5936;
+  cursor:pointer;
+  padding:0;
+  font-size:12px}
+
+.package-toggle i {
+  transition:transform 0.2s ease}
+
+.package-toggle.active i {
+  transform:rotate(180deg)}
+
+.package-items {
+  display:none;
+  padding:8px 12px;
+  background-color:#fff}
+
+.package-items.show {
+  display:block}
+
+.package-items .item-preview {
+  padding:4px 0;
+  border-bottom:1px solid #f0f0f0}
+
+.package-items .item-preview:last-child {
+  border-bottom:none}
+
+.package-total {
+  padding:8px 0;
+  border-top:1px solid #e0e0e0;
+  margin-top:8px;
+  text-align:right;
+  font-size:14px;
+  color:#333}
 
 * {
   scrollbar-width:none;
@@ -459,13 +605,6 @@ body {
   height:0;
   display:none;
   }
-
-.modal-content {
-  scrollbar-width:none;
-  -ms-overflow-style:none}
-
-.modal-content::-webkit-scrollbar {
-  display:none}
 
 .order-card.hidden {
   display:none}
@@ -494,12 +633,7 @@ body {
   justify-content:flex-end;
   margin-right:10px;
   flex-wrap:nowrap;
-  overflow-x:auto;
-  -ms-overflow-style:none;
-  scrollbar-width:none}
-
-.nav::-webkit-scrollbar {
-  display:none}
+  overflow-x:auto}
 
 .nav-item {
   display:flex;
@@ -598,15 +732,6 @@ body {
   width:26px;
   height:26px;
   animation:spin 10s linear infinite}
-
-@keyframes spin {
-  from {
-  transform:rotate(0deg)}
-
-to {
-  transform:rotate(360deg)}
-
-}
 
 .settings-button:hover .settings-icon {
   animation:spin 3s linear infinite}
@@ -751,6 +876,7 @@ to {
   border-radius:4px;
   cursor:pointer;
   font-size:14px;
+  font-weight:500;
   transition:background-color 0.3s ease,transform 0.3s ease}
 
 .save-btn:hover {
@@ -880,6 +1006,18 @@ to {
 .status-wrap .items-toggle.active i {
   transform:rotate(180deg)}
 
-.status-wrap {
-  gap:20px;
-  }
+.order-type {
+  padding:4px 8px;
+  border-radius:12px;
+  font-size:11px;
+  font-weight:500;
+  text-transform:uppercase;
+  letter-spacing:0.5px}
+
+.order-card[data-order-type="normal"] .order-type {
+  background-color:#d4edda;
+  color:#155724}
+
+.order-card[data-order-type="scheduled"] .order-type {
+  background-color:#cce5ff;
+  color:#004085}

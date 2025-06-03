@@ -1,621 +1,657 @@
+<?php
+session_start();
+require_once('../DB_connection.php');
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: \\NEW-TODAYS-MEAL\\Register&Login\\login.php");
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+
+// Handle rating form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['submit_rating'])) {
+        $order_id = $_POST['order_id'];
+        $kitchen_id = $_POST['kitchen_id'];
+        $stars = $_POST['stars'];
+
+        // Insert or update existing review
+        $check_stmt = $conn->prepare("SELECT review_no FROM reviews WHERE order_id = ?");
+        if (!$check_stmt) { die("DB error."); }
+        $check_stmt->bind_param("i", $order_id);
+        $check_stmt->execute();
+        $check_stmt->store_result();
+
+        if ($check_stmt->num_rows > 0) {
+            $check_stmt->close();
+            $update_stmt = $conn->prepare("UPDATE reviews SET stars = ?, review_date = NOW() WHERE order_id = ?");
+            $update_stmt->bind_param("ii", $stars, $order_id);
+            $update_stmt->execute();
+            $update_stmt->close();
+        } else {
+            $check_stmt->close();
+            $stmt = $conn->prepare("INSERT INTO reviews (order_id, cloud_kitchen_id, customer_id, stars, review_date) VALUES (?, ?, ?, ?, NOW())");
+            $stmt->bind_param("iiii", $order_id, $kitchen_id, $user_id, $stars);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        // Redirect to remove POST data and prevent resubmission
+        header("Location: " . $_SERVER['PHP_SELF'] . ($filter !== 'all' ? "?filter=$filter" : ""));
+        exit();
+    }
+}
+
+// Fetch customer info
+$stmt = $conn->prepare("
+    SELECT u.u_name AS username, u.phone, eu.address
+    FROM users u
+    JOIN external_user eu ON u.user_id = eu.user_id
+    JOIN customer c ON eu.user_id = c.user_id
+    WHERE u.user_id = ?
+");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$customer_result = $stmt->get_result();
+
+if ($customer_result->num_rows > 0) {
+    $customer = $customer_result->fetch_assoc();
+    $username = $customer['username'];
+    $address = $customer['address'];
+    $phone = $customer['phone'];
+} else {
+    $username = 'Customer';
+    $address = 'Address not specified';
+    $phone = '';
+}
+
+// Filter for order list
+$filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
+$status_conditions = [
+    'all' => "",
+    'preparing' => "AND (o.order_status = 'pending' OR o.order_status = 'preparing')",
+    'on-the-way' => "AND (o.order_status = 'ready_for_pickup' OR o.order_status = 'in_transit')",
+    'delivered' => "AND o.order_status = 'delivered'",
+    'cancelled' => "AND o.order_status = 'cancelled'"
+];
+$status_condition = $status_conditions[$filter] ?? "";
+
+// Check if we need to show order details modal
+$show_order_details = isset($_GET['view_order']);
+$order_details = null;
+if ($show_order_details) {
+    $order_id = $_GET['view_order'];
+
+    // Detect if order is scheduled with packages (daily_delivery) or normal/scheduled all_at_once
+    $type_check_query = "SELECT delivery_type FROM orders WHERE order_id = ? AND customer_id = ?";
+    $tstmt = $conn->prepare($type_check_query);
+    $tstmt->bind_param("ii", $order_id, $user_id);
+    $tstmt->execute();
+    $tres = $tstmt->get_result();
+    $delivery_type = null;
+    if ($row = $tres->fetch_assoc()) {
+        $delivery_type = $row['delivery_type'];
+    }
+    $tstmt->close();
+
+    if ($delivery_type === 'daily_delivery') {
+        // Fetch daily delivery order + packages + items in packages
+        $query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
+                         o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
+                         o.delivery_type,
+                         o.customer_selected_date
+                  FROM orders o
+                  JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
+                  WHERE o.customer_id = ? AND o.order_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ii", $user_id, $order_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $order_details = $result->fetch_assoc();
+
+        if ($order_details) {
+            // Fetch packages with their meals
+            $pkg_query = "SELECT p.package_id, p.package_name, p.delivery_date, p.package_price, p.package_status
+                          FROM order_packages p
+                          WHERE p.order_id = ?
+                          ORDER BY p.delivery_date ASC";
+            $pkg_stmt = $conn->prepare($pkg_query);
+            $pkg_stmt->bind_param("i", $order_id);
+            $pkg_stmt->execute();
+            $pkg_res = $pkg_stmt->get_result();
+            $packages = [];
+            while ($pkg = $pkg_res->fetch_assoc()) {
+                $package_id = $pkg['package_id'];
+                // fetch meals in package
+                $meals_query = "SELECT m.name, mip.quantity, mip.price 
+                                FROM meals_in_each_package mip
+                                JOIN meals m ON m.meal_id = mip.meal_id
+                                WHERE mip.package_id = ?";
+                $meals_stmt = $conn->prepare($meals_query);
+                $meals_stmt->bind_param("i", $package_id);
+                $meals_stmt->execute();
+                $meals_res = $meals_stmt->get_result();
+                $meals = [];
+                while ($meal = $meals_res->fetch_assoc()) {
+                    $meals[] = $meal;
+                }
+                $meals_stmt->close();
+
+                $packages[] = [
+                    'package_name' => $pkg['package_name'],
+                    'delivery_date' => $pkg['delivery_date'],
+                    'package_price' => $pkg['package_price'],
+                    'package_status' => $pkg['package_status'],
+                    'items' => $meals,
+                ];
+            }
+            $pkg_stmt->close();
+            $order_details['packages'] = $packages;
+        }
+
+    } else {
+        // normal/scheduled all_at_once order with normal meals list
+        $query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
+                         o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
+                         pd.delivery_fees, pd.total_payment, o.delivery_type, o.customer_selected_date
+                  FROM orders o
+                  JOIN payment_details pd ON o.order_id = pd.order_id
+                  JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
+                  WHERE o.customer_id = ? AND o.order_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ii", $user_id, $order_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $order_details = $result->fetch_assoc();
+
+        if ($order_details) {
+            $query = "SELECT m.name, m.photo, oc.quantity, oc.price 
+                      FROM order_content oc
+                      JOIN meals m ON oc.meal_id = m.meal_id
+                      WHERE oc.order_id = ?";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("i", $order_id);
+            $stmt->execute();
+            $items_result = $stmt->get_result();
+            $order_details['items'] = $items_result->fetch_all(MYSQLI_ASSOC);
+        }
+    }
+}
+
+// Check if we need to show rating modal
+$show_rating_modal = isset($_GET['rate_order']);
+$rating_order = null;
+if ($show_rating_modal) {
+    $order_id = $_GET['rate_order'];
+    $query = "SELECT o.order_id, o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name
+              FROM orders o
+              JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
+              WHERE o.customer_id = ? AND o.order_id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ii", $user_id, $order_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rating_order = $result->fetch_assoc();
+}
+
+// Fetch normal orders
+$normal_orders_query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
+                 o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
+                 pd.delivery_fees, pd.total_payment
+          FROM orders o
+          JOIN payment_details pd ON o.order_id = pd.order_id
+          JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
+          WHERE o.customer_id = ? AND o.ord_type = 'normal' $status_condition
+          ORDER BY o.order_date DESC";
+$stmt = $conn->prepare($normal_orders_query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$normal_orders_result = $stmt->get_result();
+$normal_orders = $normal_orders_result->fetch_all(MYSQLI_ASSOC);
+
+// Fetch scheduled orders with all_at_once delivery
+$scheduled_orders_query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
+                 o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
+                 pd.delivery_fees, pd.total_payment, o.delivery_type, o.customer_selected_date
+          FROM orders o
+          JOIN payment_details pd ON o.order_id = pd.order_id
+          JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
+          WHERE o.customer_id = ? AND o.ord_type = 'scheduled' AND o.delivery_type = 'all_at_once' $status_condition
+          ORDER BY o.order_date DESC";
+$stmt = $conn->prepare($scheduled_orders_query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$scheduled_orders_result = $stmt->get_result();
+$scheduled_orders = $scheduled_orders_result->fetch_all(MYSQLI_ASSOC);
+
+// Fetch scheduled orders with daily_delivery type and packages presence
+$scheduled_daily_query = "SELECT o.order_id, o.order_date, o.order_status, o.total_price, 
+                 o.cloud_kitchen_id as kitchen_id, ck.business_name as kitchen_name,
+                 o.delivery_type, o.customer_selected_date
+          FROM orders o
+          JOIN cloud_kitchen_owner ck ON o.cloud_kitchen_id = ck.user_id
+          WHERE o.customer_id = ? AND o.ord_type = 'scheduled' AND o.delivery_type = 'daily_delivery' $status_condition
+          ORDER BY o.order_date DESC";
+$stmt = $conn->prepare($scheduled_daily_query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$scheduled_daily_result = $stmt->get_result();
+$scheduled_daily_orders = $scheduled_daily_result->fetch_all(MYSQLI_ASSOC);
+
+// Combine all orders
+$orders = array_merge($normal_orders, $scheduled_orders, $scheduled_daily_orders);
+
+// For each order, get items, or packages + review + toggle status
+foreach ($orders as &$order) {
+    // Scheduled daily_delivery => fetch packages and package meals
+    if (isset($order['delivery_type']) && $order['delivery_type'] === 'daily_delivery') {
+        // Fetch packages
+        $pkg_query = "SELECT p.package_id, p.package_name, p.delivery_date, p.package_price, p.package_status
+                      FROM order_packages p
+                      WHERE p.order_id = ?
+                      ORDER BY p.delivery_date ASC";
+        $pkg_stmt = $conn->prepare($pkg_query);
+        $pkg_stmt->bind_param("i", $order['order_id']);
+        $pkg_stmt->execute();
+        $pkg_res = $pkg_stmt->get_result();
+        $packages = [];
+        while ($pkg = $pkg_res->fetch_assoc()) {
+            $package_id = $pkg['package_id'];
+            // fetch meals in package
+            $meals_query = "SELECT m.name, mip.quantity, mip.price 
+                            FROM meals_in_each_package mip
+                            JOIN meals m ON m.meal_id = mip.meal_id
+                            WHERE mip.package_id = ?";
+            $meals_stmt = $conn->prepare($meals_query);
+            $meals_stmt->bind_param("i", $package_id);
+            $meals_stmt->execute();
+            $meals_res = $meals_stmt->get_result();
+            $meals = [];
+            while ($meal = $meals_res->fetch_assoc()) {
+                $meals[] = $meal;
+            }
+            $meals_stmt->close();
+
+            $packages[] = [
+                'package_name' => $pkg['package_name'],
+                'delivery_date' => $pkg['delivery_date'],
+                'package_price' => $pkg['package_price'],
+                'package_status' => $pkg['package_status'],
+                'items' => $meals,
+            ];
+        }
+        $pkg_stmt->close();
+        $order['packages'] = $packages;
+
+        // For daily_delivery orders, no normal items list
+        $order['items'] = [];
+    } else {
+        // normal or scheduled all_at_once orders: fetch items normally
+        $query = "SELECT m.name, m.photo, oc.quantity, oc.price 
+                  FROM order_content oc
+                  JOIN meals m ON oc.meal_id = m.meal_id
+                  WHERE oc.order_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $order['order_id']);
+        $stmt->execute();
+        $items_result = $stmt->get_result();
+        $order['items'] = $items_result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    // reviews
+    $review_query = "SELECT stars FROM reviews WHERE order_id = ?";
+    $stmt = $conn->prepare($review_query);
+    $stmt->bind_param("i", $order['order_id']);
+    $stmt->execute();
+    $review_result = $stmt->get_result();
+    $order['review'] = $review_result->fetch_assoc() ?: null;
+
+    $order['show_items'] = (isset($_GET['show_items']) && (int)$_GET['show_items'] === $order['order_id'] && (!isset($_GET['hide_items']) || (int)$_GET['hide_items'] !== $order['order_id']));
+    
+    $order['delivery_type'] = $order['delivery_type'] ?? 'all_at_once';
+    $order['customer_selected_date'] = $order['customer_selected_date'] ?? null;
+}
+unset($order);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Track Connect</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Order Track Connect</title>
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
-     <header class="header">
-        <div class="logo">
-          <h1 class="heading"> 𝓣𝓸𝓭𝓪𝔂'𝓼 𝓜𝓮𝓪𝓵 </h1>
-        </div>
-        <nav class="nav">
-          <a href="../2-Home Codes/index.html" class="nav-item">
-            <span class="nav-icon home"></span>
-            <span class="nav-text">Home</span>
-          </a>
-          <a href="../7- Custom Order Requested/index.html" class="nav-item active">
-            <span class="nav-icon custom-order"></span>
-            <span class="nav-text">Customized Order</span>
-          </a>
-          <a href="../9-Cart/index.html" class="nav-item">
-            <span class="nav-icon cart"></span>
-            <span class="nav-text">Cart</span>
-          </a>
-          <a href="../Meal Management/index.html" class="nav-item">
-            <span class="nav-icon meals"></span>
-            <span class="nav-text">Order</span>
-          </a>
-          <a href="../support/support.html" class="nav-item">
-            <span class="nav-icon support"></span>
-            <span class="nav-text">Support</span>
-          </a>
-        </nav>
-        <button class="settings-button" id="settings-btn">
-          <img src="../Custom_Order_Management/icons8-setting-32.png" alt="Settings" class="settings-icon">
-        </button>
-      </header>
-      <div class="settings-dropdown" id="settings-dropdown">
-        <a href="#" class="settings-item" id="account-info-btn">
-          <img src="https://img.icons8.com/windows/32/gender-neutral-user.png" class="settings-item-icon" alt="Account Info">
-          <span>Account Info</span>
-        </a>
-        <a href="#" class="settings-item" id="saved-addresses-btn">
-          <img src="https://img.icons8.com/forma-thin-sharp/24/address.png" class="settings-item-icon" alt="Saved Addresses">
-          <span>Saved Addresses</span>
-        </a>
-        <a href="#" class="settings-item" id="change-email-btn">
-          <img src="https://img.icons8.com/ios/100/new-post--v1.png" class="settings-item-icon" alt="Change Email">
-          <span>Change Email</span>
-        </a>
-        <a href="#" class="settings-item" id="change-password-btn">
-          <img src="https://img.icons8.com/windows/32/key.png" class="settings-item-icon" alt="Change Password">
-          <span>Change Password</span>
-        </a>
-        <a href="#" class="settings-item">
-          <svg class="settings-item-icon" viewBox="0 0 24 24">
-            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-          </svg>
-          <span>Logout</span>
-        </a>
-      </div>
+<?php include '..\global\navbar\navbar.php'; ?>
 
-      <div class="popup" id="account-info-popup">
-        <div class="popup-content">
-          <button id="back-btn" class="close-btn">&times;</button>
-          <h2>Account Info</h2>
-          <form id="account-info-form">
-            <div class="form-group">
-              <label for="email">Email</label>
-              <input type="email" id="email" name="email" value="john@example.com" readonly>
-            </div>
-            <div class="form-group">
-              <label for="name">Name</label>
-              <input type="text" id="name" name="name" value="John Doe" readonly>
-            </div>
-            <div class="form-group">
-              <label for="dob">Date of birth (optional)</label>
-              <input type="date" id="dob" name="dob" value="1990-01-01" readonly>
-            </div>
-            <div class="form-group">
-              <label>Gender (optional)</label>
-              <div class="radio-group">
-                <label>
-                  <input type="radio" name="gender" value="male" disabled> Male
-                </label>
-                <label>
-                  <input type="radio" name="gender" value="female" checked disabled> Female
-                </label>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="button" id="edit-save-btn" class="edit-btn bottom-right-btn">Edit</button>
-              <button type="submit" class="save-btn bottom-right-btn" id="account-save-btn" style="display: none;">Save Changes</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <div class="popup" id="saved-addresses-popup">
-        <div class="popup-content">
-          <button class="close-btn">&times;</button>
-          <h2>Saved Addresses</h2>
-          <form id="saved-addresses-form">
-            <div class="form-group">
-              <label for="address1">Address 1</label>
-              <input type="text" id="address1" name="address1" value="123 Main St, City, Country" readonly>
-            </div>
-            <div class="form-group">
-              <label for="address2">Address 2 (Optional)</label>
-              <input type="text" id="address2" name="address2" value="" readonly>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="edit-btn bottom-right-btn">Edit</button>
-              <button type="submit" class="save-btn bottom-right-btn" style="display: none;">Save Changes</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <div class="popup" id="change-email-popup">
-        <div class="popup-content">
-          <button class="close-btn">&times;</button>
-          <h2>Change Email</h2>
-          <form id="change-email-form">
-            <div class="form-group">
-              <label for="current-email">Current Email</label>
-              <input type="email" id="current-email" name="current-email" value="john@example.com" readonly>
-            </div>
-            <div class="form-group">
-              <label for="new-email">New Email</label>
-              <input type="email" id="new-email" name="new-email" required>
-            </div>
-            <div class="form-group">
-              <label for="confirm-new-email">Confirm New Email</label>
-              <input type="email" id="confirm-new-email" name="confirm-new-email" required>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="save-btn">Save Changes</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <div class="popup" id="change-password-popup">
-        <div class="popup-content">
-          <button class="close-btn">&times;</button>
-          <h2>Change Password</h2>
-          <form id="change-password-form">
-            <div class="form-group">
-              <label for="old-password">Old Password</label>
-              <input type="password" id="old-password" name="old-password" required>
-            </div>
-            <div class="form-group">
-              <label for="new-password">New Password</label>
-              <input type="password" id="new-password" name="new-password" required>
-            </div>
-            <div class="form-group">
-              <label for="confirm-new-password">Confirm New Password</label>
-              <input type="password" id="confirm-new-password" name="confirm-new-password" required>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="save-btn">Save Changes</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <script>
-        document.addEventListener('DOMContentLoaded', function() {
-          const navItems = document.querySelectorAll('.nav-item');
-          const settingsBtn = document.getElementById('settings-btn');
-          const settingsDropdown = document.getElementById('settings-dropdown');
-          const accountInfoBtn = document.getElementById('account-info-btn');
-          const accountInfoPopup = document.getElementById('account-info-popup');
-          const backBtn = document.getElementById('back-btn');
-          const editSaveBtn = document.getElementById('edit-save-btn');
-          const accountInfoForm = document.getElementById('account-info-form');
-
-          if (settingsBtn && settingsDropdown) {
-            settingsBtn.addEventListener('click', function() {
-              settingsDropdown.classList.toggle('show');
-            });
-
-            window.addEventListener('click', function(e) {
-              if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
-                settingsDropdown.classList.remove('show');
-              }
-            });
-          }
-
-          if (accountInfoBtn && accountInfoPopup && backBtn) {
-            accountInfoBtn.addEventListener('click', function(e) {
-              e.preventDefault();
-              accountInfoPopup.classList.add('show');
-              settingsDropdown.classList.remove('show');
-            });
-
-            backBtn.addEventListener('click', function() {
-              accountInfoPopup.classList.remove('show');
-            });
-
-            window.addEventListener('click', function(e) {
-              if (e.target === accountInfoPopup) {
-                accountInfoPopup.classList.remove('show');
-              }
-            });
-          }
-
-          const savedAddressesBtn = document.getElementById('saved-addresses-btn');
-          const savedAddressesPopup = document.getElementById('saved-addresses-popup');
-          const changeEmailBtn = document.getElementById('change-email-btn');
-          const changeEmailPopup = document.getElementById('change-email-popup');
-          const changePasswordBtn = document.getElementById('change-password-btn');
-          const changePasswordPopup = document.getElementById('change-password-popup');
-
-          function setupPopup(btn, popup) {
-            if (btn && popup) {
-              const closeBtn = popup.querySelector('.close-btn');
-              btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                popup.classList.add('show');
-                settingsDropdown.classList.remove('show');
-              });
-
-              closeBtn.addEventListener('click', function() {
-                popup.classList.remove('show');
-              });
-
-              window.addEventListener('click', function(e) {
-                if (e.target === popup) {
-                  popup.classList.remove('show');
-                }
-              });
-            }
-          }
-
-          setupPopup(savedAddressesBtn, savedAddressesPopup);
-          setupPopup(changeEmailBtn, changeEmailPopup);
-          setupPopup(changePasswordBtn, changePasswordPopup);
-
-          const savedAddressesForm = document.getElementById('saved-addresses-form');
-          const savedAddressesEditBtn = savedAddressesForm.querySelector('.edit-btn');
-          const savedAddressesSaveBtn = savedAddressesForm.querySelector('.save-btn');
-
-          if (savedAddressesEditBtn && savedAddressesSaveBtn) {
-            savedAddressesEditBtn.addEventListener('click', function() {
-              if (this.textContent === 'Edit') {
-                this.textContent = 'Cancel';
-                this.classList.remove('edit-btn');
-                this.classList.add('cancel-btn');
-                enableFormEditing(savedAddressesForm, true);
-                savedAddressesSaveBtn.style.display = 'block';
-                this.style.display = 'none';
-              } else {
-                this.textContent = 'Edit';
-                this.classList.remove('cancel-btn');
-                this.classList.add('edit-btn');
-                enableFormEditing(savedAddressesForm, false);
-                savedAddressesSaveBtn.style.display = 'none';
-                this.style.display = 'block';
-              }
-            });
-
-            savedAddressesSaveBtn.addEventListener('click', function(e) {
-              e.preventDefault();
-              this.classList.add('loading');
-              this.innerHTML = '<div class="loader"></div>';
-
-              setTimeout(() => {
-                this.classList.remove('loading');
-                this.classList.add('saved');
-                this.innerHTML = '<span class="checkmark">✓</span>';
-
-                setTimeout(() => {
-                  this.textContent = 'Save Changes';
-                  this.classList.remove('saved');
-                  this.style.display = 'none';
-                  savedAddressesEditBtn.textContent = 'Edit';
-                  savedAddressesEditBtn.classList.remove('cancel-btn');
-                  savedAddressesEditBtn.classList.add('edit-btn');
-                  savedAddressesEditBtn.style.display = 'block';
-                  enableFormEditing(savedAddressesForm, false);
-                }, 1500);
-              }, 1500);
-            });
-          }
-
-          const changeEmailForm = document.getElementById('change-email-form');
-          const changePasswordForm = document.getElementById('change-password-form');
-
-          function setupFormSubmission(form) {
-            if (form) {
-              form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const submitBtn = this.querySelector('button[type="submit"]');
-                submitBtn.classList.add('loading');
-                submitBtn.innerHTML = '<div class="loader"></div>';
-
-                setTimeout(() => {
-                  submitBtn.classList.remove('loading');
-                  submitBtn.classList.add('saved');
-                  submitBtn.innerHTML = '<span class="checkmark">✓</span>';
-
-                  setTimeout(() => {
-                    submitBtn.textContent = 'Save Changes';
-                    submitBtn.classList.remove('saved');
-                    form.reset();
-                  }, 1500);
-                }, 1500);
-              });
-            }
-          }
-
-          setupFormSubmission(changeEmailForm);
-          setupFormSubmission(changePasswordForm);
-
-          if (editSaveBtn && accountInfoForm) {
-            const accountSaveBtn = document.getElementById('account-save-btn');
-            editSaveBtn.addEventListener('click', function() {
-              if (this.textContent === 'Edit') {
-                this.textContent = 'Cancel';
-                this.classList.remove('edit-btn');
-                this.classList.add('cancel-btn');
-                enableFormEditing(accountInfoForm, true);
-                accountSaveBtn.style.display = 'block';
-                this.style.display = 'none';
-              } else {
-                this.textContent = 'Edit';
-                this.classList.remove('cancel-btn');
-                this.classList.add('edit-btn');
-                enableFormEditing(accountInfoForm, false);
-                accountSaveBtn.style.display = 'none';
-                this.style.display = 'block';
-              }
-            });
-
-            accountSaveBtn.addEventListener('click', function(e) {
-              e.preventDefault();
-              this.classList.add('loading');
-              this.innerHTML = '<div class="loader"></div>';
-
-              setTimeout(() => {
-                this.classList.remove('loading');
-                this.classList.add('saved');
-                this.innerHTML = '<span class="checkmark">✓</span>';
-
-                setTimeout(() => {
-                  this.textContent = 'Save Changes';
-                  this.classList.remove('saved');
-                  this.style.display = 'none';
-                  editSaveBtn.textContent = 'Edit';
-                  editSaveBtn.classList.remove('cancel-btn');
-                  editSaveBtn.classList.add('edit-btn');
-                  enableFormEditing(accountInfoForm, false);
-                }, 1500);
-              }, 1500);
-            });
-          }
-
-          function enableFormEditing(form, enable) {
-            const inputs = form.querySelectorAll('input:not([name="email"])');
-            inputs.forEach(input => {
-              input.readOnly = !enable;
-              if (input.type === 'radio') {
-                input.disabled = !enable;
-              }
-            });
-          }
-        });
-      </script>
-      
-    <div class="container">
-        <!-- Filter Tabs -->
-        <div class="filter-tabs">
-            <button class="tab-btn active" onclick="filterOrders('all')">All Orders</button>
-            <button class="tab-btn" onclick="filterOrders('preparing')">Preparing</button>
-            <button class="tab-btn" onclick="filterOrders('on-the-way')">On the way</button>
-            <button class="tab-btn" onclick="filterOrders('delivered')">Delivered</button>
-        </div>
-
-<!-- Orders List -->
-<div class="orders-list">
-
-  <!-- Order 1 - Preparing -->
-  <div class="order-card" data-status="preparing">
-    <div class="order-header">
-      <div class="restaurant-icon">
-        <img alt="El-Tahrir Restaurant" src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=48&amp;h=48&amp;fit=crop&amp;crop=center" />
-      </div>
-      <div class="order-info">
-        <h3>El-Tahrir Restaurant <span class="order-time"> • Today • 7:54 AM</span></h3>
-        <p class="order-id">Order ID: 112748123</p>
-        <div class="items-list">
-          <div class="item-preview">
-            <span class="item-name">1x Koshary</span>
-            <span class="item-price">EGP 65</span>
-          </div>
-          <div class="item-preview">
-            <span class="item-name">2x Molokhia with Rice</span>
-            <span class="item-price">EGP 85</span>
-          </div>
-          <div class="item-preview">
-            <span class="item-name">1x Mixed Grill Platter</span>
-            <span class="item-price">EGP 195</span>
-          </div>
-        </div>
-      </div>
-      <div class="status-wrap">
-        <div class="status-badge preparing">Preparing</div>
-        <button class="items-toggle" onclick="toggleItemsDropdown(event)">3 items <i class="fas fa-chevron-down"></i></button>
-      </div>
+<div class="container">
+    <div class="filter-tabs">
+        <a href="?filter=all" class="tab-btn <?php echo $filter === 'all' ? 'active' : ''; ?>">All Orders</a>
+        <a href="?filter=preparing" class="tab-btn <?php echo $filter === 'preparing' ? 'active' : ''; ?>">Preparing</a>
+        <a href="?filter=on-the-way" class="tab-btn <?php echo $filter === 'on-the-way' ? 'active' : ''; ?>">On the way</a>
+        <a href="?filter=delivered" class="tab-btn <?php echo $filter === 'delivered' ? 'active' : ''; ?>">Delivered</a>
+        <a href="?filter=cancelled" class="tab-btn <?php echo $filter === 'cancelled' ? 'active' : ''; ?>">Cancelled</a>
     </div>
-    <div class="order-actions">
-      <button class="btn-secondary" 
-              data-customer-address="45 El Gomhoria St, Dokki" 
-              data-customer-name="Mariam Yousef" 
-              data-delivery-fee="EGP 20" 
-              data-delivery-initials="AH" 
-              data-delivery-name="Ahmed Hassan" 
-              data-items='[{"name":"1x Koshary","price":"EGP 65"},{"name":"2x Molokhia with Rice","price":"EGP 85"},{"name":"1x Mixed Grill Platter","price":"EGP 195"}]' 
-              data-status="preparing" 
-              data-subtotal="EGP 335" 
-              data-total="EGP 355" 
-              onclick="showOrderDetails(this)">
-        View Details
-      </button>
-    </div>
-  </div>
 
-  <!-- Order 2 - On the way -->
-  <div class="order-card" data-status="on-the-way">
-    <div class="order-header">
-      <div class="restaurant-icon">
-        <img alt="Alexandria Kitchen" src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=48&amp;h=48&amp;fit=crop&amp;crop=center" />
-      </div>
-      <div class="order-info">
-        <h3>Alexandria Kitchen <span class="order-time"> • Today • 7:54 AM</span></h3>
-        <p class="order-id">Order ID: 112748124</p>
-        <div class="items-list">
-          <div class="item-preview">
-            <span class="item-name">1x Mahshi Wara Enab</span>
-            <span class="item-price">EGP 75</span>
-          </div>
-          <div class="item-preview">
-            <span class="item-name">2x Om Ali</span>
-            <span class="item-price">EGP 55</span>
-          </div>
-          <div class="item-preview">
-            <span class="item-name">1x Koshary Special</span>
-            <span class="item-price">EGP 85</span>
-          </div>
-        </div>
-      </div>
-      <div class="status-wrap">
-        <div class="status-badge on-the-way">On the way</div>
-        <button class="items-toggle" onclick="toggleItemsDropdown(event)">3 items <i class="fas fa-chevron-down"></i></button>
-      </div>
-    </div>
-    <div class="order-actions">
-      <button class="btn-secondary" 
-              data-customer-address="12 Tahrir Square, Downtown" 
-              data-customer-name="Omar El-Sharif" 
-              data-delivery-fee="EGP 25" 
-              data-delivery-initials="AH" 
-              data-delivery-name="Ahmed Hassan" 
-              data-items='[{"name":"1x Mahshi Wara Enab","price":"EGP 75"},{"name":"2x Om Ali","price":"EGP 55"},{"name":"1x Koshary Special","price":"EGP 85"}]' 
-              data-status="on-the-way" 
-              data-subtotal="EGP 215" 
-              data-total="EGP 240" 
-              onclick="showOrderDetails(this)">
-        View Details
-      </button>
-    </div>
-  </div>
-
-  <!-- Order 3 - Delivered -->
-  <div class="order-card" data-status="delivered">
-    <div class="order-header">
-      <div class="restaurant-icon">
-        <img alt="Cairo Cuisine" src="https://images.unsplash.com/photo-1559339352-11d035aa65de?w=48&amp;h=48&amp;fit=crop&amp;crop=center" />
-      </div>
-      <div class="order-info">
-        <h3>Cairo Cuisine <span class="order-time"> • Today • 7:54 AM</span></h3>
-        <p class="order-id">Order ID: 112748126</p>
-        <div class="items-list">
-          <div class="item-preview">
-            <span class="item-name">1x Mahshi Wara Enab</span>
-            <span class="item-price">EGP 75</span>
-          </div>
-          <div class="item-preview">
-            <span class="item-name">2x Om Ali</span>
-            <span class="item-price">EGP 55</span>
-          </div>
-          <div class="item-preview">
-            <span class="item-name">1x Koshary Special</span>
-            <span class="item-price">EGP 85</span>
-          </div>
-        </div>
-      </div>
-      <div class="status-wrap">
-        <div class="status-badge delivered">Delivered</div>
-        <button class="items-toggle" onclick="toggleItemsDropdown(event)">3 items <i class="fas fa-chevron-down"></i></button>
-      </div>
-    </div>
-    <div class="order-actions delivered-actions">
-      <button class="btn-secondary small" 
-              data-customer-address="12 Tahrir Square, Downtown" 
-              data-customer-name="Omar El-Sharif" 
-              data-delivery-fee="EGP 25" 
-              data-items='[{"name":"1x Mahshi Wara Enab","price":"EGP 75"},{"name":"2x Om Ali","price":"EGP 55"},{"name":"1x Koshary Special","price":"EGP 85"}]' 
-              data-restaurant="Cairo Cuisine" 
-              data-status="delivered" 
-              data-subtotal="EGP 215" 
-              data-total="EGP 240" 
-              onclick="showOrderDetails(this)">
-        View Details
-      </button>
-      <button class="btn-primary" 
-              data-restaurant="Cairo Cuisine" 
-              onclick="showRatingModal(this)">
-        Rate Order
-      </button>
-    </div>
-  </div>
-
-    <!-- Order Details Modal -->
-    <div id="orderModal" class="modal" onclick="closeModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h2>Order Details</h2>
-                <button class="close" onclick="closeOrderModal()">&times;</button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="customer-info">
-                    <h3>Customer Information</h3>
-                    <div class="info-item">
-                        <span class="icon"><i class="fas fa-user"></i></span>
-                        <span id="customerName">Mariam Yousef</span>
+    <div class="orders-list">
+        <?php 
+        $status_map = [
+            'pending' => 'preparing',
+            'preparing' => 'preparing',
+            'ready_for_pickup' => 'on-the-way',
+            'in_transit' => 'on-the-way',
+            'delivered' => 'delivered',
+            'cancelled' => 'cancelled'
+        ];
+        foreach ($orders as $order):
+            $status_class = $status_map[$order['order_status']] ?? 'preparing';
+            $order_date = new DateTime($order['order_date']);
+            $is_scheduled_all_at_once = isset($order['delivery_type']) && $order['delivery_type'] === 'all_at_once' && isset($order['customer_selected_date']);
+            $is_scheduled_daily = isset($order['delivery_type']) && $order['delivery_type'] === 'daily_delivery';
+        ?>
+        <?php if ($is_scheduled_daily): ?>
+            <!-- Order with Packages -->
+            <div class="order-card" data-status="<?php echo $status_class; ?>" data-order-type="scheduled">
+                <div class="order-header">
+                    <div class="restaurant-icon">
+                        <img alt="<?php echo htmlspecialchars($order['kitchen_name']); ?>" src="caterer.jpg" />
                     </div>
-                    <div class="info-item">
-                        <span class="icon"><i class="fas fa-map-marker-alt"></i></span>
-                        <span id="customerAddress">45 El Gomhoria St, Dokki, Giza</span>
+                    <div class="order-info">
+                        <h3><?php echo htmlspecialchars($order['kitchen_name']); ?> <span class="order-time"> • <?php echo $order_date->format('M j, Y'); ?> • <?php echo $order_date->format('g:i A'); ?></span> <span class="order-type">Scheduled</span></h3>
+                        <p class="order-id">Order ID: <?php echo $order['order_id']; ?></p>
+                        <p class="delivery-type">Delivery Type: Daily</p>
+                        <div class="packages-list">
+                            <?php foreach ($order['packages'] as $idx => $package): 
+                                $pkg_status_class = $status_map[$package['package_status']] ?? $package['package_status'];
+                                $pkg_delivery_date = (new DateTime($package['delivery_date']))->format('M j, Y');
+                            ?>
+                            <div class="package" data-package-status="<?php echo htmlspecialchars($pkg_status_class); ?>">
+                                <div class="package-header" onclick="togglePackageDropdown(event)">
+                                    <div class="package-info">
+                                        <span class="package-title"><?php echo htmlspecialchars($package['package_name']); ?> • Delivery Date Should be: <?php echo $pkg_delivery_date; ?></span>
+                                    </div>
+                                    <div class="package-controls">
+                                        <span class="package-status <?php echo htmlspecialchars($pkg_status_class); ?>"><?php echo ucwords(str_replace('-', ' ', $pkg_status_class)); ?></span>
+                                        <button class="package-toggle" aria-label="Toggle package items">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="package-items">
+                                    <?php foreach ($package['items'] as $item): ?>
+                                    <div class="item-preview">
+                                        <span class="item-name"><?php echo htmlspecialchars($item['quantity'] . 'x ' . $item['name']); ?></span>
+                                        <span class="item-price">EGP <?php echo number_format(floatval(str_replace('EGP ', '', $item['price'])), 2); ?></span>
+                                    </div>
+                                    <?php endforeach; ?>
+                                    <div class="package-total">
+                                        <strong>Package Total: EGP <?php echo number_format($package['package_price'], 2); ?></strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="status-wrap">
+                        <div class="status-badge <?php echo $status_class; ?>">
+                            <?php 
+                            echo ucwords(str_replace('-', ' ', $status_class));
+                            if ($status_class == 'on-the-way') echo ' (In Transit)';
+                            ?>
+                        </div>
                     </div>
                 </div>
-
-                <div class="delivery-person" id="deliveryPersonSection">
-                    <h3>Delivery Person</h3>
-                    <div class="delivery-info">
-                        <div class="delivery-avatar">AH</div>
-                        <span class="delivery-name">Ahmed Hassan</span>
-                        <button class="call-btn"><i class="fas fa-phone"></i> Call</button>
+                <div class="order-actions">
+                    <a href="?view_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-secondary">View Details</a>
+                </div>
+            </div>
+        <?php else: ?>
+            <!-- Normal or all_at_once scheduled orders -->
+            <div class="order-card" data-status="<?php echo $status_class; ?>" data-order-type="<?php echo $is_scheduled_all_at_once ? 'scheduled' : 'normal'; ?>">
+                <div class="order-header">
+                    <div class="restaurant-icon">
+                        <img alt="<?php echo htmlspecialchars($order['kitchen_name']); ?>" src="caterer.jpg" />
+                    </div>
+                    <div class="order-info">
+                        <h3><?php echo htmlspecialchars($order['kitchen_name']); ?> 
+                            <span class="order-time"> • <?php echo $order_date->format('M j, Y'); ?> • <?php echo $order_date->format('g:i A'); ?></span> 
+                            <?php if ($is_scheduled_all_at_once): ?>
+                                <span class="order-type">Scheduled</span></h3>
+                                <p class="order-id">Order ID: <?php echo $order['order_id']; ?></p>
+                                <p class="delivery-type">Delivery Type: All at once</p>
+                                <?php if ($order['customer_selected_date']): ?>
+                                    <?php $delivery_date = new DateTime($order['customer_selected_date']); ?>
+                                    <p class="delivery-date">Delivery Date Should be: <?php echo $delivery_date->format('M j, Y'); ?></p>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <span class="order-type">Normal</span></h3>
+                                <p class="order-id">Order ID: <?php echo $order['order_id']; ?></p>
+                            <?php endif; ?>
+                        <div class="items-list <?php echo $order['show_items'] ? 'show' : ''; ?>">
+                            <?php foreach ($order['items'] as $item): ?>
+                            <div class="item-preview">
+                                <span class="item-name"><?php echo $item['quantity']; ?>x <?php echo htmlspecialchars($item['name']); ?></span>
+                                <span class="item-price">EGP <?php echo number_format($item['price'], 2); ?></span>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="status-wrap">
+                        <div class="status-badge <?php echo $status_class; ?>">
+                            <?php 
+                            echo ucwords(str_replace('-', ' ', $status_class));
+                            if ($status_class == 'on-the-way') echo ' (In Transit)';
+                            ?>
+                        </div>
+                        <?php if ($order['show_items']): ?>
+                            <a href="?hide_items=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="items-toggle active"><?php echo count($order['items']); ?> items <i class="fas fa-chevron-up"></i></a>
+                        <?php else: ?>
+                            <a href="?show_items=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="items-toggle"><?php echo count($order['items']); ?> items <i class="fas fa-chevron-down"></i></a>
+                        <?php endif; ?>
                     </div>
                 </div>
+                <div class="order-actions <?php echo $status_class == 'delivered' ? 'delivered-actions' : ''; ?>">
+                    <a href="?view_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-secondary <?php echo $status_class == 'delivered' ? 'small' : ''; ?>">View Details</a>
+                    <?php if ($status_class == 'delivered'): ?>
+                        <?php if ($order['review']): ?>
+                            <div class="rated-badge"><span>Rated: <?php echo $order['review']['stars']; ?>&#9733;</span></div>
+                        <?php else: ?>
+                            <a href="?rate_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-primary">Rate Order</a>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        <?php endforeach; ?>
+    </div>
+</div>
 
+<!-- Order Details Modal -->
+<?php if ($show_order_details && $order_details): ?>
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="orderDetailsTitle">
+    <div class="modal-content" style="max-height:85vh; overflow-y:auto;">
+        <div class="modal-header">
+            <h2 id="orderDetailsTitle">Order Details</h2>
+            <a href="?<?php echo $filter !== 'all' ? 'filter='.$filter : ''; ?>" aria-label="Close modal" class="close">&times;</a>
+        </div>
+        <div class="modal-body">
+            <div class="customer-info">
+                <h3>Customer Information</h3>
+                <div class="info-item">
+                    <span class="icon" aria-hidden="true"><i class="fas fa-user"></i></span>
+                    <span id="customerName"><?php echo htmlspecialchars($username); ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="icon" aria-hidden="true"><i class="fas fa-map-marker-alt"></i></span>
+                    <span id="customerAddress"><?php echo htmlspecialchars($address); ?></span>
+                </div>
+            </div>
+
+            <?php if (isset($order_details['delivery_type']) && $order_details['delivery_type'] === 'all_at_once' && isset($order_details['customer_selected_date'])): ?>
+                <div class="delivery-info">
+                    <h3>Delivery Information</h3>
+                    <div class="info-item">
+                        <span class="icon" aria-hidden="true"><i class="fas fa-truck"></i></span>
+                        <span>Delivery Type: All at once</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
+                        <span>Scheduled Delivery Date: <?php echo (new DateTime($order_details['customer_selected_date']))->format('M j, Y'); ?></span>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($order_details['delivery_type']) && $order_details['delivery_type'] === 'daily_delivery'): ?>
+                <div class="delivery-info">
+                    <h3>Delivery Information</h3>
+                    <div class="info-item">
+                        <span class="icon" aria-hidden="true"><i class="fas fa-truck"></i></span>
+                        <span>Delivery Type: Daily</span>
+                    </div>
+                </div>
+                <div class="packages-list">
+                    <?php foreach ($order_details['packages'] as $package): 
+                        $pkg_status_class = $status_map[$package['package_status']] ?? $package['package_status'];
+                        $pkg_delivery_date = (new DateTime($package['delivery_date']))->format('M j, Y');
+                    ?>
+                    <div class="package" data-package-status="<?php echo htmlspecialchars($pkg_status_class); ?>">
+                        <div class="package-header">
+                            <div class="package-info">
+                                <span class="package-title"><?php echo htmlspecialchars($package['package_name']); ?> • Delivery Date Should be: <?php echo $pkg_delivery_date; ?></span>
+                            </div>
+                            <div class="package-controls">
+                                <span class="package-status <?php echo htmlspecialchars($pkg_status_class); ?>"><?php echo ucwords(str_replace('-', ' ', $pkg_status_class)); ?></span>
+                            </div>
+                        </div>
+                        <div class="package-items show">
+                            <?php foreach ($package['items'] as $item): ?>
+                            <div class="item-preview">
+                                <span class="item-name"><?php echo htmlspecialchars($item['quantity'] . 'x ' . $item['name']); ?></span>
+                                <span class="item-price">EGP <?php echo number_format(floatval(str_replace('EGP ', '', $item['price'])), 2); ?></span>
+                            </div>
+                            <?php endforeach; ?>
+                            <div class="package-total">
+                                <strong>Package Total: EGP <?php echo number_format($package['package_price'], 2); ?></strong>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
                 <div class="order-items">
                     <h3>Order Items</h3>
-                    <div id="itemsList">
-                        <div class="item">
-                            <span class="item-name">1x Koshary</span>
-                            <span class="item-price">EGP 65</span>
-                        </div>
-                        <div class="item">
-                            <span class="item-name">2x Molokhia with Rice</span>
-                            <span class="item-price">EGP 85</span>
-                        </div>
-                        <div class="item">
-                            <span class="item-name">1x Mixed Grill Platter</span>
-                            <span class="item-price">EGP 195</span>
-                        </div>
+                    <?php foreach ($order_details['items'] as $item): ?>
+                    <div class="item">
+                        <span class="item-name"><?php echo $item['quantity']; ?>x <?php echo htmlspecialchars($item['name']); ?></span>
+                        <span class="item-price">EGP <?php echo number_format($item['price'], 2); ?></span>
                     </div>
+                    <?php endforeach; ?>
                 </div>
+            <?php endif; ?>
 
-                <div class="payment-summary">
-                    <h3>Payment Summary</h3>
-                    <div class="summary-item">
-                        <span>Subtotal</span>
-                        <span id="subtotal">EGP 335</span>
-                    </div>
+            <div class="payment-summary">
+                <h3>Payment Summary</h3>
+                <div class="summary-item">
+                    <span>Subtotal</span>
+                    <span id="subtotal">EGP <?php echo number_format($order_details['total_price'], 2); ?></span>
+                </div>
+                <?php if ($order_details['delivery_type'] === 'all_at_once'): ?>
                     <div class="summary-item">
                         <span>Delivery Fee</span>
-                        <span id="deliveryFee">EGP 20</span>
+                        <span id="deliveryFee">EGP <?php echo number_format($order_details['delivery_fees'], 2); ?></span>
                     </div>
                     <div class="summary-item total">
                         <span>Total</span>
-                        <span id="total">EGP 355</span>
+                        <span id="total">EGP <?php echo number_format($order_details['total_payment'], 2); ?></span>
                     </div>
-                </div>
+                <?php elseif ($order_details['delivery_type'] === 'daily_delivery'): ?>
+                    <div class="summary-item total">
+                        <span>Total</span>
+                        <span id="total">EGP <?php echo number_format($order_details['total_price'], 2); ?></span>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
+</div>
+<?php endif; ?>
 
-   <!-- Rating Modal -->
-    <div class="modal" id="ratingModal" onclick="closeModal(event)">
-      <div class="modal-content rating-modal" onclick="event.stopPropagation()">
+<!-- Rating Modal -->
+<?php if ($show_rating_modal && $rating_order): ?>
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="ratingModalTitle" id="ratingModal">
+    <div class="modal-content rating-modal">
         <div class="modal-header">
-          <button class="close-btn" onclick="closeRatingModal()">×</button>
+            <a href="?<?php echo $filter !== 'all' ? 'filter='.$filter : ''; ?>" aria-label="Close rating modal" class="close-btn">&times;</a>
         </div>
         <div class="modal-body">
-          <h2>Rate Your Order</h2>
-          <p>How was your experience with <span id="restaurantName">Cairo Cuisine</span>?</p>
-          <div class="star-rating">
-            <span class="star" data-rating="1" onclick="setRating(1)">☆</span>
-            <span class="star" data-rating="2" onclick="setRating(2)">☆</span>
-            <span class="star" data-rating="3" onclick="setRating(3)">☆</span>
-            <span class="star" data-rating="4" onclick="setRating(4)">☆</span>
-            <span class="star" data-rating="5" onclick="setRating(5)">☆</span>
-          </div>
-          <div class="rating-actions">
-            <button class="btn-secondary" onclick="closeRatingModal()">Cancel</button>
-            <button class="btn-primary" onclick="submitRating()">Submit Rating</button>
-          </div>
+            <h2 id="ratingModalTitle">Rate Your Order</h2>
+            <p>How was your experience with <strong><?php echo htmlspecialchars($rating_order['kitchen_name']); ?></strong>?</p>
+            <form id="ratingForm" method="POST" action="">
+                <input type="hidden" name="order_id" value="<?php echo $rating_order['order_id']; ?>">
+                <input type="hidden" name="kitchen_id" value="<?php echo $rating_order['kitchen_id']; ?>">
+                <input type="hidden" name="stars" id="ratingStars" value="0">
+
+                <div class="star-rating" role="radiogroup" aria-label="Star rating">
+                    <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <span 
+                            role="radio" 
+                            tabindex="0" 
+                            aria-checked="false" 
+                            class="star" 
+                            data-value="<?php echo $i; ?>"
+                            onclick="setRating(<?php echo $i; ?>)" 
+                            onkeydown="if(event.key==='Enter' || event.key===' ') setRating(<?php echo $i; ?>);"
+                        >&#9733;</span>
+                    <?php endfor; ?>
+                </div>
+                <div class="rating-actions">
+                    <a href="?<?php echo $filter !== 'all' ? 'filter='.$filter : ''; ?>" class="btn-secondary">Cancel</a>
+                    <button type="submit" name="submit_rating" class="btn-primary">Submit Rating</button>
+                </div>
+            </form>
         </div>
-      </div>
     </div>
-    <script src="script.js"></script>
+</div>
+<?php endif; ?>
+
+<?php include '..\global\footer\footer.php'; ?>
+
+<script>
+// Star rating selection for accessibility & UI
+function setRating(value) {
+    document.getElementById('ratingStars').value = value;
+    const stars = document.querySelectorAll('.star-rating .star');
+    stars.forEach((star, index) => {
+        if(index < value) {
+            star.classList.add('active');
+            star.setAttribute('aria-checked', 'true');
+        } else {
+            star.classList.remove('active');
+            star.setAttribute('aria-checked', 'false');
+        }
+    });
+}
+
+// Toggle package dropdown items display
+function togglePackageDropdown(event) {
+    const header = event.currentTarget.closest('.package-header');
+    if (!header) return;
+    const packageDiv = header.parentElement;
+    if (!packageDiv) return;
+    const itemsDiv = packageDiv.querySelector('.package-items');
+    const toggleIcon = header.querySelector('.package-toggle i');
+    if (!itemsDiv) return;
+
+    if (itemsDiv.classList.contains('show')) {
+        itemsDiv.classList.remove('show');
+        if(toggleIcon) toggleIcon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    } else {
+        itemsDiv.classList.add('show');
+        if(toggleIcon) toggleIcon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+    }
+}
+</script>
 </body>
 </html>
