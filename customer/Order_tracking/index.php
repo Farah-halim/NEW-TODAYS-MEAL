@@ -364,6 +364,22 @@ unset($order);
     padding-top: 0.5rem;
     border-top: 1px solid #eee;
 }
+
+/* Simplified package display for order details modal */
+.package-simple {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+.package-simple h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+.package-simple h4 small {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: normal;
+}
 </style>
 </head>
 <body>
@@ -525,20 +541,17 @@ unset($order);
                 <h3>Order Items</h3>
                 <?php if ($order_details['ord_type'] === 'scheduled' && $order_details['delivery_type'] === 'daily_delivery'): ?>
                     <?php foreach ($order_details['packages'] as $package): ?>
-                    <div class="package">
-                        <div class="package-header">
-                            <strong><?php echo htmlspecialchars($package['package_name']); ?></strong>
-                            <span>Delivery: <?php echo (new DateTime($package['delivery_date']))->format('M j, Y'); ?></span>
+                    <div class="package-simple">
+                        <h4><?php echo htmlspecialchars($package['package_name']); ?> 
+                            <small>(Delivery: <?php echo (new DateTime($package['delivery_date']))->format('M j, Y'); ?>)</small>
+                        </h4>
+                        <?php foreach ($package['items'] as $item): ?>
+                        <div class="item">
+                            <span class="item-name"><?php echo $item['quantity']; ?>x <?php echo htmlspecialchars($item['name']); ?></span>
+                            <span class="item-price">EGP <?php echo number_format($item['price'], 2); ?></span>
                         </div>
-                        <div class="package-content">
-                            <?php foreach ($package['items'] as $item): ?>
-                            <div class="item">
-                                <span class="item-name"><?php echo $item['quantity']; ?>x <?php echo htmlspecialchars($item['name']); ?></span>
-                                <span class="item-price">EGP <?php echo number_format($item['price'], 2); ?></span>
-                            </div>
-                            <?php endforeach; ?>
-                            <div class="package-total">Package Total: EGP <?php echo number_format($package['package_price'], 2); ?></div>
-                        </div>
+                        <?php endforeach; ?>
+                        <div class="package-total">Package Total: EGP <?php echo number_format($package['package_price'], 2); ?></div>
                     </div>
                     <?php endforeach; ?>
                 <?php else: ?>
