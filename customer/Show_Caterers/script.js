@@ -1,6 +1,18 @@
-// Cloud Kitchen JavaScript - Simplified version for rating filtering only
-document.addEventListener('DOMContentLoaded', function() {
-    // Rating filtering (if you want to keep this client-side)
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.querySelector('input[name="search"]');
+    let typingTimer;
+    const doneTypingInterval = 500; 
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                searchInput.form.submit();
+            }, doneTypingInterval);
+        });
+    }
+});
+        document.addEventListener('DOMContentLoaded', function() {
     const ratingBtns = document.querySelectorAll('.rating-btn');
     
     if (ratingBtns) {
@@ -13,8 +25,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
-    // Reset button functionality
     const resetButtons = document.querySelectorAll('[href*="reset=1"]');
     resetButtons.forEach(button => {
         button.addEventListener('click', function(e) {

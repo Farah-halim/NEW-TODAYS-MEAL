@@ -14,7 +14,7 @@ if (isset($_GET['reset'])) {
 }
 $search_term = '';
 $category_id = isset($_GET['cat_id']) ? (int)$_GET['cat_id'] : '';
-$min_rating = isset($_GET['rating']) ? (float)$_GET['rating'] : 0; // Changed default to 0 (show all)
+$min_rating = isset($_GET['rating']) ? (float)$_GET['rating'] : 0; 
 $custom_filter = isset($_GET['custom_filter']) ? $_GET['custom_filter'] : 'all';
 
 if (isset($_GET['search'])) {
@@ -115,7 +115,7 @@ $cloud_kitchens = mysqli_fetch_all($result, MYSQLI_ASSOC);
         <div class="restaurant-grid" id="restaurantGrid">
             <?php if (empty($cloud_kitchens)): ?>
                 <div class="no-results">
-                    <p>No cloud kitchens found matching your criteria.</p>
+                    <p>No cloud kitchens found.</p>
                 </div>
             <?php else: ?>
                 <?php foreach ($cloud_kitchens as $kitchen): ?>
@@ -150,6 +150,6 @@ $cloud_kitchens = mysqli_fetch_all($result, MYSQLI_ASSOC);
         </div>
     </div>
           <?php include '..\global\footer\footer.php'; ?>
-    <script src="script.js"></script>
+    <script src='script.js'> </script>
 </body>
 </html>
