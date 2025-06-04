@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let currentCategory = 'all';
 
-    // Search functionality
     searchInput.addEventListener('input', function() {
         filterMenuItems();
     });
@@ -17,7 +16,6 @@ document.addEventListener('DOMContentLoaded', function() {
         filterMenuItems();
     });
 
-    // Category filtering
     categoryBtns.forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -41,17 +39,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const price = parseFloat(item.dataset.price);
             const tags = item.dataset.tags ? item.dataset.tags.toLowerCase() : '';
             
-            // Check if search query matches name, description, or tags
             const matchesSearch = searchQuery === '' || 
                                 name.includes(searchQuery) || 
                                 description.includes(searchQuery) || 
                                 tags.includes(searchQuery);
             
-            // Check category filter
             const matchesCategory = currentCategory === 'all' || 
                                   categoryIds.includes(currentCategory);
             
-            // Check price filter
             let matchesPrice = true;
             if (selectedPriceRange === '0-50') {
                 matchesPrice = price <= 50;
@@ -70,15 +65,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Show/hide no results message
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-        
-        // Debug output
         console.log(`Search Query: "${searchQuery}"`);
         console.log(`Visible Items: ${visibleCount}`);
     }
-
-    // Initial filter
     filterMenuItems();
 });
 

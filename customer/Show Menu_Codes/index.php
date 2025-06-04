@@ -171,8 +171,8 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                         <path d="m22 21-3-3m0 0a5.5 5.5 0 1 1-7.778-7.778 5.5 5.5 0 0 1 7.778 7.778z"/>
                     </svg>
                     <span>Need something special? Request a customized order!</span>
-                </div> 
-                <a href="\NEW-TODAYS-MEAL\customer\Custom_Order\custom-order.php?kitchen_id=<?php echo $kitchen_id; ?>">
+                </div>
+                <a href="\NEW-TODAYS-MEAL\customer\Custom_Order\custom-order.php?kitchen_id=<?php echo $kitchen_id; ?>" style="text-decoration: none;">
                     <button class="custom-order-btn">Request Custom Order</button>
                 </a>
             </div>
