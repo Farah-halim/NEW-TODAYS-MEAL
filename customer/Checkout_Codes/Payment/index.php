@@ -15,15 +15,128 @@ if (!isset($_SESSION['cart_id'])) {
     exit();
 }
 
-// Variable Initialization
+$cartId = $_SESSION['cart_id'];
 $errors = [];
 $successMessage = '';
 $firstName = $email = $phone = $address = '';
 $isSubscribed = false;
 $cartItems = [];
 $subtotal = $deliveryFees = $total = 0;
+$showPopup = false;
+$redirectAfterOrder = false;
+$orderId = null;
 
-// Get user details
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['save-details'])) {
+        $newPhone = $_POST['phone'] ?? '';
+        $newAddress = $_POST['address'] ?? '';
+        
+        if (empty($newPhone)) {
+            $errors[] = "Phone number is required";
+        }
+        
+        if (empty($newAddress)) {
+            $errors[] = "Address is required";
+        }
+        
+        if (empty($errors)) {
+            $updatePhoneQuery = "UPDATE users SET phone = ? WHERE user_id = ?";
+            $stmtPhone = $conn->prepare($updatePhoneQuery);
+            $stmtPhone->bind_param("si", $newPhone, $userId);
+            $stmtPhone->execute();
+            $stmtPhone->close();
+            
+            $updateAddressQuery = "UPDATE external_user SET address = ? WHERE user_id = ?";
+            $stmtAddress = $conn->prepare($updateAddressQuery);
+            $stmtAddress->bind_param("si", $newAddress, $userId);
+            $stmtAddress->execute();
+            $stmtAddress->close();
+            
+            $successMessage = "Your details have been updated successfully!";
+            $showPopup = true;
+            
+            $phone = $newPhone;
+            $address = $newAddress;
+        }
+    }
+    elseif (isset($_POST['place-order'])) {
+        $orderType = 'normal';
+        $deliveryZone = $_POST['delivery-zone'] ?? 'Cairo';
+        $paymentMethod = $_POST['payment-method'];
+
+        $query = "SELECT m.cloud_kitchen_id FROM cart_items ci
+                  JOIN meals m ON ci.meal_id = m.meal_id
+                  WHERE ci.cart_id = ? LIMIT 1";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $_SESSION['cart_id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $cloudKitchen = $result->fetch_assoc();
+        $cloudKitchenId = $cloudKitchen['cloud_kitchen_id'];
+        $stmt->close();
+
+        $insertOrderQuery = "INSERT INTO orders (customer_id, cloud_kitchen_id, total_price, ord_type, delivery_zone, order_status) 
+                             VALUES (?, ?, ?, ?, ?, 'pending')";
+        $stmt = $conn->prepare($insertOrderQuery);
+        $stmt->bind_param("iidss", $userId, $cloudKitchenId, $total, $orderType, $deliveryZone);
+
+        if ($stmt->execute()) {
+            $orderId = $stmt->insert_id;
+
+            foreach ($cartItems as $item) {
+                $insertOrderContentQuery = "INSERT INTO order_content (order_id, meal_id, quantity, price) VALUES (?, ?, ?, ?)";
+                $stmtOC = $conn->prepare($insertOrderContentQuery);
+                $stmtOC->bind_param("iiid", $orderId, $item['meal_id'], $item['quantity'], $item['price']);
+                $stmtOC->execute();
+                $stmtOC->close();
+            }
+
+            $totalPayment = $total;
+            $websiteRevenue = 0;
+            $insertPaymentQuery = "INSERT INTO payment_details (order_id, total_ord_price, delivery_fees, website_revenue, total_payment, p_date_time, p_method) 
+                                   VALUES (?, ?, ?, ?, ?, NOW(), ?)";
+            $stmtP = $conn->prepare($insertPaymentQuery);
+            $stmtP->bind_param("iddiss", $orderId, $subtotal, $deliveryFees, $websiteRevenue, $totalPayment, $paymentMethod);
+            $stmtP->execute();
+            $stmtP->close();
+
+            $placeholderStars = 0;
+            $insertReviewQuery = "INSERT INTO reviews (stars, order_id, cloud_kitchen_id, customer_id) 
+                                VALUES (?, ?, ?, ?)";
+            $stmtR = $conn->prepare($insertReviewQuery);
+            $stmtR->bind_param("iiii", $placeholderStars, $orderId, $cloudKitchenId, $userId);
+            $stmtR->execute();
+            $stmtR->close();
+
+            $updateKitchenOwnerQuery = "UPDATE cloud_kitchen_owner SET orders_count = orders_count + 1 WHERE user_id = ?";
+            $stmtUpdateOwner = $conn->prepare($updateKitchenOwnerQuery);
+            $stmtUpdateOwner->bind_param("i", $cloudKitchenId);
+            $stmtUpdateOwner->execute();
+            $stmtUpdateOwner->close();
+
+            $deleteCartItemsQuery = "DELETE FROM cart_items WHERE cart_id = ?";
+            $stmtDeleteItems = $conn->prepare($deleteCartItemsQuery);
+            $stmtDeleteItems->bind_param("i", $_SESSION['cart_id']);
+            $stmtDeleteItems->execute();
+            $stmtDeleteItems->close();
+
+            $deleteCartQuery = "DELETE FROM cart WHERE cart_id = ?";
+            $stmtDeleteCart = $conn->prepare($deleteCartQuery);
+            $stmtDeleteCart->bind_param("i", $_SESSION['cart_id']);
+            $stmtDeleteCart->execute();
+            $stmtDeleteCart->close();
+
+            unset($_SESSION['cart_id']);
+
+            $successMessage = "Order placed successfully! Your order ID is: " . $orderId;
+            $showPopup = true;
+            $redirectAfterOrder = true;
+        } else {
+            $errors[] = "Failed to create order. Please try again.";
+        }
+        $stmt->close();
+    }}
+
 $query = "SELECT u.u_name, u.mail, u.phone, eu.address, c.is_subscribed
           FROM users u
           JOIN external_user eu ON u.user_id = eu.user_id
@@ -46,7 +159,6 @@ if ($result->num_rows > 0) {
 }
 $stmt->close();
 
-// Get cart items for order summary display
 $query = "SELECT ci.*, m.name as meal_name, m.price, m.photo 
           FROM cart_items ci
           JOIN meals m ON ci.meal_id = m.meal_id
@@ -58,19 +170,17 @@ $result = $stmt->get_result();
 $cartItems = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-if (empty($cartItems)) {
+if (empty($cartItems) && !isset($_POST['save-details'])) {
     $_SESSION['redirect_reason'] = "Your cart is empty.";
     header("Location: /NEW-TODAYS-MEAL/customer/cart/cart.php");
     exit();
 }
 
-// Calculate subtotal
 $subtotal = 0;
 foreach ($cartItems as $item) {
     $subtotal += $item['price'] * $item['quantity'];
 }
 
-// Delivery Fees Calculation
 $deliveryFees = 15.00;
 if ($isSubscribed) {
     $query = "SELECT * FROM delivery_subscriptions 
@@ -85,97 +195,7 @@ if ($isSubscribed) {
     }
     $stmt->close();
 }
-
 $total = $subtotal + $deliveryFees;
-
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['place-order'])) {
-        $orderType = 'normal';
-        $deliveryZone = $_POST['delivery-zone'] ?? 'Cairo';
-        $paymentMethod = $_POST['payment-method'];
-
-        // Get cloud kitchen ID
-        $query = "SELECT m.cloud_kitchen_id FROM cart_items ci
-                  JOIN meals m ON ci.meal_id = m.meal_id
-                  WHERE ci.cart_id = ? LIMIT 1";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("i", $_SESSION['cart_id']);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $cloudKitchen = $result->fetch_assoc();
-        $cloudKitchenId = $cloudKitchen['cloud_kitchen_id'];
-        $stmt->close();
-
-        // Insert order
-        $insertOrderQuery = "INSERT INTO orders (customer_id, cloud_kitchen_id, total_price, ord_type, delivery_zone, order_status) 
-                             VALUES (?, ?, ?, ?, ?, 'pending')";
-        $stmt = $conn->prepare($insertOrderQuery);
-        $stmt->bind_param("iidss", $userId, $cloudKitchenId, $total, $orderType, $deliveryZone);
-
-        if ($stmt->execute()) {
-            $orderId = $stmt->insert_id;
-
-            // Insert order items
-            foreach ($cartItems as $item) {
-                $insertOrderContentQuery = "INSERT INTO order_content (order_id, meal_id, quantity, price) VALUES (?, ?, ?, ?)";
-                $stmtOC = $conn->prepare($insertOrderContentQuery);
-                $stmtOC->bind_param("iiid", $orderId, $item['meal_id'], $item['quantity'], $item['price']);
-                $stmtOC->execute();
-                $stmtOC->close();
-            }
-
-            // Insert payment
-            $totalPayment = $total;
-            $websiteRevenue = 0;
-            $insertPaymentQuery = "INSERT INTO payment_details (order_id, total_ord_price, delivery_fees, website_revenue, total_payment, p_date_time, p_method) 
-                                   VALUES (?, ?, ?, ?, ?, NOW(), ?)";
-            $stmtP = $conn->prepare($insertPaymentQuery);
-            $stmtP->bind_param("iddiss", $orderId, $subtotal, $deliveryFees, $websiteRevenue, $totalPayment, $paymentMethod);
-            $stmtP->execute();
-            $stmtP->close();
-
-            // Insert placeholder review row (stars set to 0 for now)
-$placeholderStars = 0;
-$insertReviewQuery = "INSERT INTO reviews (stars, order_id, cloud_kitchen_id, customer_id) 
-                      VALUES (?, ?, ?, ?)";
-$stmtR = $conn->prepare($insertReviewQuery);
-$stmtR->bind_param("iiii", $placeholderStars, $orderId, $cloudKitchenId, $userId);
-$stmtR->execute();
-$stmtR->close();
-
-// Increment orders_count for cloud kitchen owner
-        $updateKitchenOwnerQuery = "UPDATE cloud_kitchen_owner SET orders_count = orders_count + 1 WHERE user_id = ?";
-        $stmtUpdateOwner = $conn->prepare($updateKitchenOwnerQuery);
-        $stmtUpdateOwner->bind_param("i", $cloudKitchenId);
-        $stmtUpdateOwner->execute();
-        $stmtUpdateOwner->close();
-
-
-            // Delete cart items
-            $deleteCartItemsQuery = "DELETE FROM cart_items WHERE cart_id = ?";
-            $stmtDeleteItems = $conn->prepare($deleteCartItemsQuery);
-            $stmtDeleteItems->bind_param("i", $_SESSION['cart_id']);
-            $stmtDeleteItems->execute();
-            $stmtDeleteItems->close();
-
-            // Delete cart record
-            $deleteCartQuery = "DELETE FROM cart WHERE cart_id = ?";
-            $stmtDeleteCart = $conn->prepare($deleteCartQuery);
-            $stmtDeleteCart->bind_param("i", $_SESSION['cart_id']);
-            $stmtDeleteCart->execute();
-            $stmtDeleteCart->close();
-
-            // Clear session
-            unset($_SESSION['cart_id']);
-
-            $successMessage = "Order placed successfully! Your order ID is: " . $orderId;
-        } else {
-            $errors[] = "Failed to create order. Please try again.";
-        }
-        $stmt->close();
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -196,6 +216,55 @@ $stmtR->close();
     .error-message i { margin-right: 10px; }
     .success-message { color: #4CAF50; background-color: #e8f5e9; padding: 15px; margin-bottom: 20px; border-radius: 4px; display: flex; align-items: center; }
     .success-message i { margin-right: 10px; }
+    
+    .popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .popup-content {
+      background-color: white;
+      padding: 25px;
+      border-radius: 8px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .popup-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+    .popup-icon.success {
+      color: #4CAF50;
+    }
+    .popup-title {
+      font-size: 20px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    .popup-message {
+      margin-bottom: 20px;
+    }
+    .popup-button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .popup-button:hover {
+      background-color: #45a049;
+    }
   </style>
 </head>
 <body>
@@ -211,7 +280,7 @@ $stmtR->close();
       </div>
     <?php endif; ?>
     
-    <?php if (!empty($successMessage)): ?>
+    <?php if (!empty($successMessage) && !$showPopup): ?>
       <div class="success-message">
         <i class="fas fa-check-circle"></i>
         <?php echo $successMessage; ?>
@@ -278,6 +347,10 @@ $stmtR->close();
                   </label>
                   <textarea id="address" name="address" class="form-textarea" rows="3" placeholder="123 Main St, Apt 4B, New York, 10001" required><?php echo htmlspecialchars($address); ?></textarea>
                 </div>
+                
+                <button type="submit" name="save-details" class="button button-outline" style="margin-top: 10px;">
+                  <i class="fas fa-save" style="margin-right:5px"></i> Save Changes
+                </button>
               </div>
               
               <h2 class="card-title" style="margin-top: 2rem;">Payment Method</h2>
@@ -363,6 +436,40 @@ $stmtR->close();
     </form>
   </div>
 
+  <?php if ($showPopup): ?>
+    <div class="popup-overlay" id="popup-overlay">
+      <div class="popup-content">
+        <div class="popup-icon success">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="popup-title">Success!</div>
+        <div class="popup-message"><?php echo $successMessage; ?></div>
+        <button class="popup-button" id="popup-close-button">
+          <?php echo $redirectAfterOrder ? 'Track Your Order' : 'OK'; ?>
+        </button>
+      </div>
+    </div>
+  <?php endif; ?>
+
   <?php include '..\..\global\footer\footer.php'; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const popupOverlay = document.getElementById('popup-overlay');
+      const closeButton = document.getElementById('popup-close-button');
+      
+      if (popupOverlay && closeButton) {
+        closeButton.addEventListener('click', function() {
+          <?php if ($redirectAfterOrder): ?>
+            // Store order ID in session for tracking page
+            <?php $_SESSION['last_order_id'] = $orderId; ?>
+            window.location.href = "/NEW-TODAYS-MEAL/customer/Order_tracking/index.php?order_id=<?php echo $orderId; ?>";
+          <?php else: ?>
+            popupOverlay.style.display = 'none';
+          <?php endif; ?>
+        });
+      }
+    });
+</script>
 </body>
 </html>

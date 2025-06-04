@@ -10,11 +10,43 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 
 if (!isset($_SESSION['cart_id'])) {
-    $_SESSION['redirect_reason'] = "Your cart session expired or wasn't properly initialized.";
+    $_SESSION['redirect_reason'] = "Cart session expired.";
     header("Location: /NEW-TODAYS-MEAL/customer/cart/cart.php");
     exit();
 }
-// Variable Initialization
+
+$cartId = $_SESSION['cart_id'];
+if (isset($_POST['save-details'])) {
+    $newPhone = $_POST['phone'] ?? '';
+    $newAddress = $_POST['address'] ?? '';
+    
+    if (empty($newPhone)) {
+        $errors[] = "Phone number is required";
+    }
+    
+    if (empty($newAddress)) {
+        $errors[] = "Address is required";
+    }
+    
+    if (empty($errors)) {
+        $updatePhoneQuery = "UPDATE users SET phone = ? WHERE user_id = ?";
+        $stmtPhone = $conn->prepare($updatePhoneQuery);
+        $stmtPhone->bind_param("si", $newPhone, $userId);
+        $stmtPhone->execute();
+        $stmtPhone->close();
+        
+        $updateAddressQuery = "UPDATE external_user SET address = ? WHERE user_id = ?";
+        $stmtAddress = $conn->prepare($updateAddressQuery);
+        $stmtAddress->bind_param("si", $newAddress, $userId);
+        $stmtAddress->execute();
+        $stmtAddress->close();
+        
+        $successMessage = "Your details have been updated successfully!";
+        
+        $phone = $newPhone;
+        $address = $newAddress;
+    }
+}
 $errors = [];
 $successMessage = '';
 $firstName = $email = $phone = $address = '';
@@ -22,11 +54,9 @@ $isSubscribed = false;
 $cartItems = [];
 $subtotal = $deliveryFees = $total = 0;
 
-// Retrieve delivery type and selected date from session
-$deliveryType = 'all_at_once'; // Set fixed delivery type as per your request
+$deliveryType = 'all_at_once'; 
 $deliveryDate = $_SESSION['order_data']['deliveryDay'] ?? date('Y-m-d');
 
-// Get user details
 $query = "SELECT u.u_name, u.mail, u.phone, eu.address, c.is_subscribed
           FROM users u
           JOIN external_user eu ON u.user_id = eu.user_id
@@ -49,7 +79,6 @@ if ($result->num_rows > 0) {
 }
 $stmt->close();
 
-// Get cart items for order summary display
 $query = "SELECT ci.*, m.name as meal_name, m.price, m.photo 
           FROM cart_items ci
           JOIN meals m ON ci.meal_id = m.meal_id
@@ -67,14 +96,12 @@ if (empty($cartItems)) {
     exit();
 }
 
-// Calculate subtotal
 $subtotal = 0;
 foreach ($cartItems as $item) {
     $subtotal += $item['price'] * $item['quantity'];
 }
 
-// Delivery Fees Calculation
-$deliveryFees = 15.00; // Standard delivery fee
+$deliveryFees = 15.00; 
 if ($isSubscribed) {
     $query = "SELECT * FROM delivery_subscriptions 
               WHERE customer_id = ? AND is_active = 1 AND end_date >= CURDATE()";
@@ -91,18 +118,15 @@ if ($isSubscribed) {
 
 $total = $subtotal + $deliveryFees;
 
-// Handle order placement
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place-order'])) {
-    $orderType = 'scheduled'; // Set fixed order type as per your request
-    $deliveryZone = $_POST['delivery-zone'] ?? 'Cairo'; // Default delivery zone
+    $orderType = 'scheduled'; 
+    $deliveryZone = $_POST['delivery-zone'] ?? 'Cairo'; 
     $paymentMethod = $_POST['payment-method'];
 
-    // Validate payment method
     if (!in_array($paymentMethod, ['cash', 'card'])) {
         $errors[] = "Invalid payment method.";
     }
 
-    // Get cloud kitchen ID
     $query = "SELECT m.cloud_kitchen_id FROM cart_items ci
               JOIN meals m ON ci.meal_id = m.meal_id
               WHERE ci.cart_id = ? LIMIT 1";
@@ -119,8 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place-order'])) {
     }
     $stmt->close();
 
-    // Insert order
-    // Insert order
+
 if (empty($errors)) {
     $insertOrderQuery = "INSERT INTO orders (customer_id, cloud_kitchen_id, total_price, ord_type, delivery_type, customer_selected_date, delivery_zone) 
                          VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -130,7 +153,6 @@ if (empty($errors)) {
     if ($stmt->execute()) {
         $orderId = $stmt->insert_id;
 
-        // Insert order items
         foreach ($cartItems as $item) {
             $insertOrderContentQuery = "INSERT INTO order_content (order_id, meal_id, quantity, price) VALUES (?, ?, ?, ?)";
             $stmtOC = $conn->prepare($insertOrderContentQuery);
@@ -139,8 +161,7 @@ if (empty($errors)) {
             $stmtOC->close();
         }
 
-        // Insert payment details
-        $websiteRevenue = 0; // Assuming no revenue in this case
+        $websiteRevenue = 0; 
         $insertPaymentQuery = "INSERT INTO payment_details (order_id, total_ord_price, delivery_fees, website_revenue, total_payment, p_date_time, p_method) 
                                VALUES (?, ?, ?, ?, ?, NOW(), ?)";
         $stmtP = $conn->prepare($insertPaymentQuery);
@@ -148,7 +169,6 @@ if (empty($errors)) {
         $stmtP->execute();
         $stmtP->close();
 
-        // Insert placeholder review row (stars set to 0 for now)
         $placeholderStars = 0;
         $insertReviewQuery = "INSERT INTO reviews (stars, order_id, cloud_kitchen_id, customer_id) 
                               VALUES (?, ?, ?, ?)";
@@ -157,28 +177,24 @@ if (empty($errors)) {
         $stmtR->execute();
         $stmtR->close();
 
-        // Increment orders_count for cloud kitchen owner
         $updateKitchenOwnerQuery = "UPDATE cloud_kitchen_owner SET orders_count = orders_count + 1 WHERE user_id = ?";
         $stmtUpdateOwner = $conn->prepare($updateKitchenOwnerQuery);
         $stmtUpdateOwner->bind_param("i", $cloudKitchenId);
         $stmtUpdateOwner->execute();
         $stmtUpdateOwner->close();
 
-        // Clear cart items and session variables
         $deleteCartItemsQuery = "DELETE FROM cart_items WHERE cart_id = ?";
         $stmtDeleteItems = $conn->prepare($deleteCartItemsQuery);
         $stmtDeleteItems->bind_param("i", $_SESSION['cart_id']);
         $stmtDeleteItems->execute();
         $stmtDeleteItems->close();
 
-        // Delete cart record
         $deleteCartQuery = "DELETE FROM cart WHERE cart_id = ?";
         $stmtDeleteCart = $conn->prepare($deleteCartQuery);
         $stmtDeleteCart->bind_param("i", $_SESSION['cart_id']);
         $stmtDeleteCart->execute();
         $stmtDeleteCart->close();
 
-        // Clear session
         unset($_SESSION['cart_id']);
         unset($_SESSION['order_data']);
 
@@ -190,7 +206,6 @@ if (empty($errors)) {
         $errors[] = "Failed to create order. Please try again.";
     }
 }
-
 }
 ?>
 
@@ -293,10 +308,14 @@ if (empty($errors)) {
                   </label>
                   <textarea id="address" name="address" class="form-textarea" rows="3" placeholder="123 Main St, Apt 4B, New York, 10001" required><?php echo htmlspecialchars($address); ?></textarea>
                 </div>
+                
+                <button type="submit" name="save-details" class="button button-outline" style="margin-top: 10px;">
+                  <i class="fas fa-save" style="margin-right:5px"></i> Save Changes
+                </button>
               </div>
               
               <h2 class="card-title" style="margin-top: 2rem;">Payment Method</h2>
-              
+        
               <div class="payment-methods">
                 <div class="payment-method">
                   <input type="radio" id="cash-on-delivery" name="payment-method" value="cash" class="radio-input" checked>
@@ -386,7 +405,6 @@ if (empty($errors)) {
       </div>
     </form>
   </div>
-
   <?php include '..\..\global\footer\footer.php'; ?>
 </body>
 </html>

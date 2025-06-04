@@ -636,6 +636,7 @@ h1 {
 }
 
 .day-title {
+  background-color: #ff57221a;
   display: flex;
   align-items: center;
 }
