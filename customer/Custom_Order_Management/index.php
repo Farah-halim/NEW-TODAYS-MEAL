@@ -2,16 +2,13 @@
 include "../DB_connection.php";
 session_start();
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: \NEW-TODAYS-MEAL\Register&Login\login.php");
     exit();
 }
 
-// Get customer ID from session
 $customer_id = $_SESSION['user_id'];
 
-// Fetch customer's customized orders with all statuses
 $orders = [];
 if ($conn) {
     $sql = "SELECT co.*, o.order_date, o.delivery_date, o.delivery_zone, 
@@ -31,7 +28,14 @@ if ($conn) {
     $result = $stmt->get_result();
     
     while ($row = $result->fetch_assoc()) {
-        // Map the database status to our simplified status system
+        $payment_check_sql = "SELECT payment_id FROM payment_details WHERE order_id = ?";
+        $payment_stmt = $conn->prepare($payment_check_sql);
+        $payment_stmt->bind_param("i", $row['order_id']);
+        $payment_stmt->execute();
+        $payment_result = $payment_stmt->get_result();
+        $payment_exists = $payment_result->num_rows > 0;
+        $payment_stmt->close();
+        
         if ($row['customer_approval'] == 'approved') {
             $row['status'] = 'price_accepted';
         } elseif ($row['customer_approval'] == 'rejected') {
@@ -43,6 +47,8 @@ if ($conn) {
         } else {
             $row['status'] = 'pending';
         }
+        
+        $row['payment_exists'] = $payment_exists;
         $orders[] = $row;
     }
     
@@ -61,7 +67,6 @@ if ($conn) {
            <?php include '..\global\navbar\navbar.php'; ?>
 
     <div class="container">
-        <!-- Search and Filter Section -->
 <div class="search-filter-section">
     <div class="search-bar">
         <div class="search-input-wrapper">
@@ -70,7 +75,6 @@ if ($conn) {
         </div>
     </div>
 
-    <!-- Filter Buttons Only -->
     <div class="filter-controls">
         <div class="filter-buttons">
             <button class="filter-btn active" data-filter="all">All Orders</button>
@@ -81,9 +85,6 @@ if ($conn) {
         </div>
     </div>
 </div>
-
-
-        <!-- Orders List -->
         <div class="orders-list" id="ordersList">
             <?php foreach ($orders as $index => $order): 
                 $order_number = str_pad($order['order_id'], 3, '0', STR_PAD_LEFT);
@@ -91,7 +92,6 @@ if ($conn) {
                 $delivery_time = date('g:i A', strtotime($order['delivery_date']));
                 $order_date = date('Y-m-d', strtotime($order['order_date']));
                 
-                // Determine badge class and status message based on order status
                 $badge_class = '';
                 $status_message = '';
                 switch ($order['status']) {
@@ -109,15 +109,12 @@ if ($conn) {
                         break;
                     case 'price_accepted':
                         $badge_class = 'badge-price-accepted';
-                        $status_message = 'Price accepted - Ready for checkout';
+                        $status_message = $order['payment_exists'] ? 'Payment completed' : 'Price accepted - Ready for checkout';
                         break;
                 }
                 
-                // Determine if price quote section should be shown
                 $show_price_quote = ($order['status'] == 'approved' && $order['chosen_amount'] !== null);
-                
-                // Determine if invoice section should be shown
-                $show_invoice = ($order['status'] == 'price_accepted' && $order['chosen_amount'] !== null);
+                $show_invoice = ($order['status'] == 'price_accepted' && $order['chosen_amount'] !== null && !$order['payment_exists']);
             ?>
             <div class="order-card" data-status="<?= htmlspecialchars($order['status']) ?>" 
                  data-search="ORD-<?= $order_number ?> <?= htmlspecialchars($order['cloud_kitchen_name']) ?> <?= htmlspecialchars($order['ord_description']) ?>">
@@ -167,7 +164,6 @@ if ($conn) {
                             </div>
                         </div>
                     
-                        <!-- Delete Button Section -->
                         <?php if ($order['status'] === 'rejected'): ?> 
                         <div class="delete-section">
                             <div class="section-header">
@@ -272,7 +268,6 @@ if ($conn) {
         </div>
     </div>
     <?php include '..\global\footer\footer.php'; ?>
-
     <script src="script.js"></script>
 </body>
 </html>
