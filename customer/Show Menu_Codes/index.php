@@ -8,7 +8,6 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = $_SESSION['user_id'];
-
 if (!isset($_GET['kitchen_id']) || empty($_GET['kitchen_id'])) {
     echo '<!DOCTYPE html>
     <html lang="en">
@@ -30,40 +29,28 @@ if (!isset($_GET['kitchen_id']) || empty($_GET['kitchen_id'])) {
     </html>';
     exit();
 }
-
 $kitchen_id = (int)$_GET['kitchen_id'];
-
-// Get cloud kitchen ID from URL
 $kitchen_id = isset($_GET['kitchen_id']) ? (int)$_GET['kitchen_id'] : 0;
 
-// Initialize variables
 $search_term = '';
 $price_range = 'all';
 $current_category = 'all';
-
-// Get search term if provided
 if (isset($_GET['search'])) {
     $search_term = mysqli_real_escape_string($conn, $_GET['search']);
 }
-
-// Get price range if provided
 if (isset($_GET['price'])) {
     $price_range = mysqli_real_escape_string($conn, $_GET['price']);
 }
-
-// Get category if provided
 if (isset($_GET['category'])) {
     $current_category = mysqli_real_escape_string($conn, $_GET['category']);
 }
 
-// Get cloud kitchen details
 $kitchen_query = "SELECT cko.business_name, cko.customized_orders 
                   FROM cloud_kitchen_owner cko 
                   WHERE cko.user_id = $kitchen_id AND cko.is_approved = 1";
 $kitchen_result = mysqli_query($conn, $kitchen_query);
 $kitchen = mysqli_fetch_assoc($kitchen_result);
 
-// Get meals for this cloud kitchen with their categories and dietary tags
 $meals_query = "SELECT m.meal_id, m.name, m.description, m.price, m.photo, m.stock_quantity,
                        GROUP_CONCAT(DISTINCT c.c_name SEPARATOR ', ') AS categories,
                        GROUP_CONCAT(DISTINCT c.cat_id SEPARATOR ',') AS category_ids,
@@ -79,7 +66,6 @@ $meals_query = "SELECT m.meal_id, m.name, m.description, m.price, m.photo, m.sto
 $meals_result = mysqli_query($conn, $meals_query);
 $meals = mysqli_fetch_all($meals_result, MYSQLI_ASSOC);
 
-// Get all unique categories this cloud kitchen specializes in
 $specialized_categories_query = "SELECT DISTINCT c.cat_id, c.c_name 
                                 FROM category c
                                 JOIN cloud_kitchen_specialist_category cksc ON c.cat_id = cksc.cat_id
@@ -87,7 +73,6 @@ $specialized_categories_query = "SELECT DISTINCT c.cat_id, c.c_name
 $specialized_categories_result = mysqli_query($conn, $specialized_categories_query);
 $specialized_categories = mysqli_fetch_all($specialized_categories_result, MYSQLI_ASSOC);
 
-// Get all categories that have meals (for the "All" filter)
 $meal_categories_query = "SELECT DISTINCT c.cat_id, c.c_name 
                          FROM category c
                          JOIN meal_category mc ON c.cat_id = mc.cat_id
@@ -105,7 +90,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        /* Popup Notification Styles */
         .notification-popup {
             position: fixed;
             top: 20px;
@@ -146,8 +130,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
 </head>
 <body>
     <?php include '..\global\navbar\navbar.php'; ?>
-
-    <!-- Notification Popup Container -->
     <div id="notificationContainer"></div>
 
     <div class="container">
@@ -160,7 +142,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                 </a>
             </div>
             <h1 class="page-title" id="restaurantName"><?php echo htmlspecialchars($kitchen['business_name'] ?? 'Cloud Kitchen'); ?></h1>
-        <!-- Customized Order Banner -->
         <?php if ($kitchen['customized_orders']): ?>
         <div class="custom-order-banner">
             <div class="banner-content">
@@ -171,7 +152,7 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                         <path d="m22 21-3-3m0 0a5.5 5.5 0 1 1-7.778-7.778 5.5 5.5 0 0 1 7.778 7.778z"/>
                     </svg>
                     <span>Need something special? Request a customized order!</span>
-                </div>
+                </div> 
                 <a href="\NEW-TODAYS-MEAL\customer\Custom_Order\custom-order.php?kitchen_id=<?php echo $kitchen_id; ?>" style="text-decoration: none;">
                     <button class="custom-order-btn">Request Custom Order</button>
                 </a>
@@ -179,7 +160,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
         </div>
         <?php endif; ?>
 
-        <!-- Search and Filters -->
         <form method="GET" id="searchForm">
             <div class="search-card">
                 <div class="search-container">
@@ -195,12 +175,11 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                             <option value="100+" <?php echo $price_range === '100+' ? 'selected' : ''; ?>>100+ EGP</option>
                         </select>
                     </div>
-                    <button type="submit" style="display:none;">Search</button> <!-- Hidden submit button for form submission -->
+                    <button type="submit" style="display:none;">Search</button> 
                 </div>
             </div>
         </form>
 
-        <!-- Category Tabs -->
         <div class="category-tabs">
             <form method="GET">
                 <input type="hidden" name="kitchen_id" value="<?php echo $kitchen_id; ?>">
@@ -217,7 +196,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
             </form>
         </div>
 
-        <!-- Menu Items Grid -->
         <div class="menu-grid" id="menuGrid">
             <?php if (empty($meals)): ?>
                 <div class="no-results">
@@ -226,7 +204,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
             <?php else: 
                 $has_results = false;
                 foreach ($meals as $meal): 
-                    // Check if meal matches current filters
                     $matches_category = $current_category === 'all' || 
                                       (isset($meal['category_ids']) && strpos($meal['category_ids'], $current_category) !== false);
                     
@@ -245,8 +222,8 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                     
                     if ($matches_category && $matches_price && $matches_search):
                         $has_results = true;
-                        $is_out_of_stock = $meal['stock_quantity'] <= 0;
-            ?>
+                        $is_out_of_stock = $meal['stock_quantity'] <= 0; ?>
+
                   <div class="menu-item" 
                       data-category="<?php echo htmlspecialchars($meal['category_ids'] ?? ''); ?>" 
                       data-price="<?php echo htmlspecialchars($meal['price']); ?>"
@@ -273,13 +250,11 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                                   <?php 
                                   $tags = explode(', ', $meal['dietary_tags']);
                                   foreach ($tags as $tag): 
-                                      if (!empty(trim($tag))):
-                                  ?>
+                                      if (!empty(trim($tag))):?>
                                       <span class="dietary-tag"><?php echo htmlspecialchars(trim($tag)); ?></span>
                                   <?php 
                                       endif;
-                                  endforeach; 
-                                  ?>
+                                  endforeach; ?>
                               </div>
                           <?php endif; ?>
                           <div class="item-footer">
@@ -312,11 +287,8 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
     <script src="script.js"></script>
     <script>
       if (performance.navigation.type === 1) {
-            // Page was reloaded
             window.location.href = window.location.pathname + '?kitchen_id=<?php echo $kitchen_id; ?>';
         }
-
-        // Cart AJAX functionality with popup notifications
         document.querySelectorAll('.add-to-cart-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const mealId = this.getAttribute('data-meal-id');
@@ -342,14 +314,11 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                     });
             });
         });
-
-        // Show notification popup
         function showNotification(message, type) {
             const container = document.getElementById('notificationContainer');
             const notification = document.createElement('div');
             notification.className = `notification-popup ${type}`;
             
-            // Create icon based on type
             let icon;
             switch(type) {
                 case 'success':
@@ -364,7 +333,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                 default:
                     icon = '<i class="fas fa-info-circle notification-icon"></i>';
             }
-            
             notification.innerHTML = `
                 ${icon}
                 ${message}
@@ -373,12 +341,10 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
             
             container.appendChild(notification);
             
-            // Show the notification
             setTimeout(() => {
                 notification.classList.add('show');
             }, 10);
             
-            // Close button functionality
             notification.querySelector('.close-notification').addEventListener('click', () => {
                 notification.classList.remove('show');
                 setTimeout(() => {
@@ -386,7 +352,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                 }, 300);
             });
             
-            // Auto-hide after 5 seconds
             setTimeout(() => {
                 notification.classList.remove('show');
                 setTimeout(() => {
@@ -395,7 +360,6 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
             }, 5000);
         }
 
-        // Check URL for cart messages (for when page is reloaded after adding to cart)
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('cart_message')) {
             const message = urlParams.get('cart_message');
@@ -406,10 +370,7 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                 case 'out_of_stock':
                     showNotification('Item added to cart successfully!', 'success');
                     break;
-
-            }
-            
-            // Clean URL
+                }
             const cleanUrl = window.location.pathname + '?kitchen_id=<?php echo $kitchen_id; ?>';
             window.history.replaceState({}, document.title, cleanUrl);
         }

@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', function() {
         filterMenuItems();
     });
 
-    // Price range filtering
     priceRange.addEventListener('change', function() {
         filterMenuItems();
     });
@@ -56,7 +55,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 matchesPrice = price > 100;
             }
 
-            // Show/hide based on all filters
             if (matchesSearch && matchesCategory && matchesPrice) {
                 item.classList.remove('hidden');
                 visibleCount++;
@@ -65,10 +63,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        noResults.style.display = visibleCount === 0 ? 'block' : 'none';   
         console.log(`Search Query: "${searchQuery}"`);
         console.log(`Visible Items: ${visibleCount}`);
     }
     filterMenuItems();
 });
-
