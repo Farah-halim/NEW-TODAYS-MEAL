@@ -5,68 +5,23 @@ include "../DB_connection.php";
 session_start();
 
 $error = '';
-$success = '';
-$account_type = 'customer'; 
+$account_type = 'customer'; // Fixed for this page
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $error = processRegistration($conn);
-    if ($error === "Customer registration successful!") {
-        $success = $error;
-        $error = '';
-    }
-}
-
-function validateEgyptPhone($phone) {
-    return preg_match('/^01[0-9]{9}$/', $phone);
-}
-
-function validateName($name) {
-    return preg_match('/^[a-zA-Z\s]+$/', $name);
-}
-
-
-
-function validateEmail($email) {
-    return filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
 function processRegistration($conn) {
-    $requiredFields = ['fullname', 'email', 'phone', 'password', 'terms', 'address', 'gender', 'birthday'];
+    $requiredFields = ['fullname', 'email', 'phone', 'password', 'terms', 'address'];
     
     foreach ($requiredFields as $field) {
         if (empty($_POST[$field])) {
-            return "All fields are required";
+            return "Missing required field: $field";
         }
     }
 
-    if (!validateName($_POST['fullname'])) {
-        return "Name should contain only letters and spaces";
-    }
-
-    if (!validateEmail($_POST['email'])) {
-        return "Please enter a valid email address";
-    }
-
-    $email = $conn->real_escape_string($_POST['email']);
-    $sql = "SELECT mail FROM users WHERE mail = '$email'";
-    $result = $conn->query($sql);
-    if ($result->num_rows > 0) {
-        return "Email already Exist";
-    }
-
-    if (!validateEgyptPhone($_POST['phone'])) {
-        return "Please enter a valid phone number (10 or 11 digits starting with 01)";
-    }
-
-  
-    $birthday = new DateTime($_POST['birthday']);
-    $today = new DateTime();
-    $age = $today->diff($birthday)->y;
-    if ($age < 13) {
-        return "You must be at least 13 years old to register";
-    }
-
     $fullname = $conn->real_escape_string($_POST['fullname']);
+    $email = $conn->real_escape_string($_POST['email']);
     $phone = $conn->real_escape_string($_POST['phone']);
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
     $role = 'external_user';
@@ -80,15 +35,14 @@ function processRegistration($conn) {
         $user_id = $conn->insert_id;
 
         $address = $conn->real_escape_string($_POST['address']);
-        $gender = $conn->real_escape_string($_POST['gender']);
-        $birthday = $conn->real_escape_string($_POST['birthday']);
+        $gender = isset($_POST['gender']) ? $conn->real_escape_string($_POST['gender']) : 'Male';
 
         $sql = "INSERT INTO external_user (user_id, address, ext_role) 
                 VALUES ('$user_id', '$address', 'customer')";
         if (!$conn->query($sql)) throw new Exception("External user insert failed: " . $conn->error);
 
         $sql = "INSERT INTO customer (user_id, gender, BOD) 
-                VALUES ('$user_id', '$gender', '$birthday')";
+                VALUES ('$user_id', '$gender', CURDATE())";
         if (!$conn->query($sql)) throw new Exception("Customer insert failed: " . $conn->error);
 
         $conn->commit();
@@ -96,9 +50,10 @@ function processRegistration($conn) {
     } catch (Exception $e) {
         $conn->rollback();
         error_log("Registration Error: " . $e->getMessage());
-        return "Registration failed. Please try again later.";
+        return $e->getMessage();
     }
-} ?>
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -109,71 +64,35 @@ function processRegistration($conn) {
     <link rel="stylesheet" href="global-register.css" />
     <link rel="stylesheet" href="register.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            z-index: 9999;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            animation: slideIn 0.3s forwards;
-        }
-        
-        .notification.success {
-            background-color: #4CAF50;
-        }
-        
-        .notification.error {
-            background-color: #f44336;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-    </style>
 </head>
 <body>
     <div class="signup-form">
-        <?php if ($error || $success): ?>
+        <?php if ($error && $error !== "Customer registration successful!"): ?>
+            <div class="error-message" style="color: red;"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
+        <?php if ($error === "Customer registration successful!"): ?>
             <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const message = "<?php echo addslashes($success ? $success : $error); ?>";
-                    const isSuccess = <?php echo $success ? 'true' : 'false'; ?>;
-                    
-                    const notification = document.createElement('div');
-                    notification.className = `notification ${isSuccess ? 'success' : 'error'}`;
-                    
-                    const icon = document.createElement('i');
-                    icon.setAttribute('data-lucide', isSuccess ? 'check-circle' : 'alert-circle');
-                    notification.appendChild(icon);
-                    
-                    const text = document.createTextNode(message);
-                    notification.appendChild(text);
-                    
-                    document.body.appendChild(notification);
-                    lucide.createIcons();
-                    
-                    setTimeout(() => {
-                        notification.style.opacity = '0';
-                        notification.style.transition = 'opacity 0.5s ease';
-                        
-                        setTimeout(() => {
-                            notification.remove();
-                            if (isSuccess) {
-                                window.location.href = 'login.php';
-                            }
-                        }, 500);
+                document.addEventListener('DOMContentLoaded', function () {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.textContent = "Customer registration successful! Redirecting to login...";
+                    messageDiv.style.position = 'fixed';
+                    messageDiv.style.top = '20px';
+                    messageDiv.style.right = '20px';
+                    messageDiv.style.backgroundColor = '#4CAF50';
+                    messageDiv.style.color = 'white';
+                    messageDiv.style.padding = '15px';
+                    messageDiv.style.borderRadius = '8px';
+                    messageDiv.style.zIndex = '9999';
+                    document.body.appendChild(messageDiv);
+
+                    setTimeout(function () {
+                        window.location.href = 'login.php';
                     }, 3000);
                 });
             </script>
         <?php endif; ?>
+
         <nav class="navbar">
             <div class="nav-content">
                 <a href="#" class="logo-link">
@@ -266,32 +185,6 @@ function processRegistration($conn) {
                             </div>
                         </div>
                         
-                        <div class="input-group-row">
-                            <div class="input-group half-width">
-                                <label for="gender">
-                                    <i data-lucide="venetian-mask"></i> Gender <span class="required">*</span>
-                                </label>
-                                <div class="input-wrapper">
-                                    <select id="gender" name="gender" required>
-                                        <option value="" disabled hidden selected>Select Gender</option>
-                                        <option value="Male" <?php echo (isset($_POST['gender']) && $_POST['gender'] === 'Male') ? 'selected' : ''; ?>>Male</option>
-                                        <option value="Female" <?php echo (isset($_POST['gender']) && $_POST['gender'] === 'Female') ? 'selected' : ''; ?>>Female</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="input-group half-width">
-                                <label for="birthday">
-                                    <i data-lucide="calendar"></i> Birthday <span class="required">*</span>
-                                </label>
-                                <div class="input-wrapper">
-                                    <input type="date" id="birthday" name="birthday" required
-                                           value="<?php echo htmlspecialchars($_POST['birthday'] ?? ''); ?>"
-                                           max="<?php echo date('Y-m-d'); ?>">
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="input-group full-width">
                             <label for="address">
                                 <i data-lucide="map-pin"></i> Address <span class="required">*</span>
@@ -315,6 +208,8 @@ function processRegistration($conn) {
             </div>
         </div>
     </div>
-    <script> lucide.createIcons(); </script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>
