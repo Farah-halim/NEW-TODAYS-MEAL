@@ -25,9 +25,6 @@ function validateName($name) {
     return preg_match('/^[a-zA-Z\s]+$/', $name);
 }
 
-function validatePassword($password) {
-    return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/', $password);
-}
 
 function validateEmail($email) {
     return filter_var($email, FILTER_VALIDATE_EMAIL);
@@ -74,15 +71,6 @@ function processRegistration($conn) {
 
     if (!validateEgyptPhone($_POST['phone'])) {
         return "Please enter a valid Egyptian phone number starting with 01 followed by 9 digits";
-    }
-
-    if (!validatePassword($_POST['password'])) {
-        return "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number";
-    }
-
-    $nationalId = trim($_POST['nationalId']);
-    if (!validateEgyptNationalID($nationalId)) {
-        return "Please enter a valid 14-digit Egyptian National ID";
     }
 
     $fullname = $conn->real_escape_string($_POST['fullname']);
