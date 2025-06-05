@@ -90,12 +90,12 @@ body {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
-    background-color: #E5E7EB;
+    background-color: #dab98b;
     color: #374151;
 }
 
 .filter-btn:hover {
-    background-color: #D1D5DB;
+    background-color: #e57e24;
 }
 
 .filter-btn.active {
@@ -104,7 +104,7 @@ body {
 }
 
 .filter-btn.active:hover {
-    background-color: #6D5A47;
+    background-color: #e57e24;
 }
 
 /* Order Cards */

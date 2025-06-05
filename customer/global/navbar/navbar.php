@@ -26,9 +26,9 @@ $user_id = $_SESSION['user_id'];
                 <span class="nav-icon cart"></span>
                 <span class="nav-text">Cart</span>
             </a>
-            <a href="\NEW-TODAYS-MEAL\customer\Order_tracking\index.php" class="nav-item">
+            <a href="\NEW-TODAYS-MEAL\customer\Show_Caterers\index.php" class="nav-item">
                 <span class="nav-icon meals"></span>
-                <span class="nav-text">My Orders</span>
+                <span class="nav-text">Order</span>
             </a>
             <a href="\NEW-TODAYS-MEAL\customer\support\support.php" class="nav-item">
                 <span class="nav-icon support"></span>
@@ -37,7 +37,7 @@ $user_id = $_SESSION['user_id'];
             
         </nav>
         <button class="settings-button" id="settings-btn">
-            <img src="icons8-setting-32.png" alt="Settings" class="settings-icon">
+            <img src="https://img.icons8.com/?size=100&id=S6mp3couBHct&format=png&color=6a4125" alt="Settings" class="settings-icon">
         </button>
     </header>
     <div class="settings-dropdown" id="settings-dropdown">
@@ -435,7 +435,7 @@ body {
   align-items: center;
   height: 64px;
   padding: 0 55px;
-  background-color: #af5214;
+  background-color: #6a4125;
   margin-bottom: 45px;
 }
 

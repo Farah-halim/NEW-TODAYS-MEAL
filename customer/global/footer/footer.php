@@ -1,122 +1,178 @@
-    <footer>
-        <div class="footer-container">
-            <div class="footer-about">
-                <h3>Today's Meal</h3>
-                <p>Delivering homemade goodness straight to your door. Passionate chefs. Authentic flavors. Unforgettable experiences.</p>
-            </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Today's Meal</title>
 
-            <div class="footer-links">
-                <h4>Quick Links</h4>
-                <ul>
-                    <li><a href="\NEW-TODAYS-MEAL\customer\Home\index.php">Home</a></li>
-                    <li><a href="\NEW-TODAYS-MEAL\customer\Show_Caterers\index.php">Order</a></li>
-                    <li><a href="#">Profile</a></li>
-                    <li><a href="#">Cart</a></li>
-                </ul>
-            </div>
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    integrity="sha512-xHOa8B2XN1XaV4gKkdEvhT+3vzhyHvKgI0wJqKvOtVjT2Ry2Uos5QxITV0M/8sw8K6MfxnvJj2AfMHV2O6l3EQ=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
 
-            <div class="footer-contact">
-                <h4>Contact Us</h4>
-                <p>Email: support@todaysmeal.com</p>
-                <p>Phone: +1 (234) 567-890</p>
-                <p>Address: 123 Foodie Lane, Flavor Town, USA</p>
-            </div>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
 
-            <div class="footer-social">
-                <h4>Follow Us</h4>
-                <div class="social-icons">
-                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
-                    <a href="#"><i class="fab fa-instagram"></i></a>
-                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                </div>
-            </div>
+    .footer {
+      background-color: #6a4125;
+      color: #f5f5f5;
+      padding: 40px 20px;
+    }
+
+    .footer-container {
+      max-width: 1200px;
+      margin: auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 40px;
+    }
+
+    .footer-col {
+      flex: 1 1 200px;
+    }
+
+    .footer h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .footer ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .footer ul li {
+      margin-bottom: 8px;
+    }
+
+    .footer a {
+      text-decoration: none;
+      color: #e0e0e0;
+      font-size: 14px;
+    }
+
+    .footer a:hover {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+
+    .social-icons {
+      margin: 10px 0;
+    }
+
+    .social-icons a {
+      display: inline-block;
+      margin-right: 10px;
+      font-size: 18px;
+      color: #f5f5f5;
+      transition: color 0.3s ease;
+    }
+
+    .social-icons a:hover {
+      color: #ffffff;
+    }
+
+    .newsletter {
+      font-size: 14px;
+      margin: 10px 0;
+      color: #e8e8e8;
+    }
+
+    .subscribe-button {
+      display: inline-block;
+      background-color: #f5e0c2;
+      color: #000;
+      padding: 10px 16px;
+      margin-top: 10px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .subscribe-button i {
+      margin-right: 8px;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      font-size: 13px;
+      margin-top: 30px;
+      color: #d4d4d4;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 15px;
+    }
+
+    @media (max-width: 768px) {
+      .footer-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+
+      <!-- About -->
+      <div class="footer-col">
+        <h3>About Today's Meal</h3>
+        <ul>
+          <li><a href="#">Our Kitchen</a></li>
+          <li><a href="#">Fresh Ingredients</a></li>
+          <li><a href="#">Delivery Areas</a></li>
+          <li><a href="#">Contact Us</a></li>
+        </ul>
+      </div>
+
+      <!-- Support -->
+      <div class="footer-col">
+        <h3>Support</h3>
+        <ul>
+          <li><a href="NEW-TODAYS-MEAL\customer\support\support.php">FAQs</a></li>
+          <li><a href="#">Order Tracking</a></li>
+          <li><a href="#">Cancel or Change Order</a></li>
+          <li><a href="#">Allergen Info</a></li>
+        </ul>
+      </div>
+
+      <!-- Social / Newsletter -->
+      <div class="footer-col">
+        <h3>Connect with Us</h3>
+        <div class="social-icons">
+          <a href="#"><i class="fab fa-facebook-f"></i></a>
+          <a href="#"><i class="fab fa-x-twitter"></i></a>
+          <a href="#"><i class="fab fa-instagram"></i></a>
+          <a href="#"><i class="fab fa-youtube"></i></a>
         </div>
+        <p class="newsletter">Get exclusive updates and offers!<br>Subscribe to our newsletter.</p>
+        <button class="subscribe-button">
+          <i class="fas fa-envelope"></i> Subscribe
+        </button>
+      </div>
 
-        <div class="footer-bottom">
-            <p>&copy; 2025 Today's Meal. All rights reserved.</p>
-        </div>
-    </footer>
+    </div>
 
-    <style> 
-        
-/* Footer */
-footer {
-  background-color: #6a4125;
-  color: #fff;
-  padding: 40px 20px 10px;
-  font-family: Arial, sans-serif;
-margin-top: 100px;
-}
+    <div class="footer-bottom">
+      &copy; 2025 Today's Meal Cloud Kitchen. All rights reserved.
+    </div>
+  </footer>
 
-.footer-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 40px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.footer-container > div {
-  flex: 1 1 200px;
-}
-
-.footer-about h3,
-.footer-links h4,
-.footer-contact h4,
-.footer-social h4 {
-  margin-bottom: 15px;
-  font-size: 18px;
-  border-bottom: 2px solid #fff;
-  padding-bottom: 5px;
-  color: #fff;
-}
-
-.footer-about p,
-.footer-contact p {
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.footer-links ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.footer-links li {
-  margin-bottom: 10px;
-}
-
-.footer-links a {
-  color: #fff;
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.footer-links a:hover {
-  text-decoration: underline;
-}
-
-.social-icons a {
-  display: inline-block;
-  margin-right: 10px;
-  color: #fff;
-  font-size: 18px;
-  transition: color 0.3s;
-}
-
-.social-icons a:hover {
-  color: #f4d35e;
-}
-
-.footer-bottom {
-  text-align: center;
-  margin-top: 30px;
-  font-size: 13px;
-  border-top: 1px solid #fff;
-  padding-top: 10px;
-}
-
-    </style>
+</body>
+</html>
