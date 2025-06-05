@@ -24,9 +24,7 @@ function validateName($name) {
     return preg_match('/^[a-zA-Z\s]+$/', $name);
 }
 
-function validatePassword($password) {
-    return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/', $password);
-}
+
 
 function validateEmail($email) {
     return filter_var($email, FILTER_VALIDATE_EMAIL);
@@ -60,10 +58,7 @@ function processRegistration($conn) {
         return "Please enter a valid phone number (10 or 11 digits starting with 01)";
     }
 
-    if (!validatePassword($_POST['password'])) {
-        return "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number";
-    }
-
+  
     $birthday = new DateTime($_POST['birthday']);
     $today = new DateTime();
     $age = $today->diff($birthday)->y;
