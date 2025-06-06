@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fileSize = $_FILES['referenceImage']['size'];
 
         if (in_array($fileType, $allowedTypes) && $fileSize <= 5 * 1024 * 1024) { // 5MB max
-            $uploadDir = '../../uploads/custom_orders/';
+            $uploadDir = 'NEW-TODAYS-MEAL\uploads\custom_orders';
             
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $destination = $uploadDir . $filename;
 
             if (move_uploaded_file($_FILES['referenceImage']['tmp_name'], $destination)) {
-                $imagePath = '../../uploads/custom_orders/' . $filename;
+                $imagePath = 'NEW-TODAYS-MEAL\uploads\custom_orders' . $filename;
             } else {
                 $errors[] = "Failed to upload image.";
             }
@@ -131,7 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "File upload error: " . $_FILES['referenceImage']['error'];
     }
 
-    // If no errors, proceed with database insertion
     if (empty($errors)) {
         $conn->begin_transaction();
         

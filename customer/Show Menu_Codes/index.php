@@ -1,14 +1,19 @@
 <?php
+// Start session and check authentication
 session_start();
-require_once('../DB_connection.php');
+require_once __DIR__ . '/../DB_connection.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: \NEW-TODAYS-MEAL\Register&Login\login.php");
+    header("Location: /NEW-TODAYS-MEAL/Register&Login/login.php");
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
+$user_id = (int)$_SESSION['user_id'];
+
+// Validate kitchen_id parameter
 if (!isset($_GET['kitchen_id']) || empty($_GET['kitchen_id'])) {
+    // Error response with proper HTML content type
+    header('Content-Type: text/html; charset=UTF-8');
     echo '<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -29,57 +34,133 @@ if (!isset($_GET['kitchen_id']) || empty($_GET['kitchen_id'])) {
     </html>';
     exit();
 }
+
+// Sanitize and validate kitchen_id
 $kitchen_id = (int)$_GET['kitchen_id'];
-$kitchen_id = isset($_GET['kitchen_id']) ? (int)$_GET['kitchen_id'] : 0;
-
-$search_term = '';
-$price_range = 'all';
-$current_category = 'all';
-if (isset($_GET['search'])) {
-    $search_term = mysqli_real_escape_string($conn, $_GET['search']);
-}
-if (isset($_GET['price'])) {
-    $price_range = mysqli_real_escape_string($conn, $_GET['price']);
-}
-if (isset($_GET['category'])) {
-    $current_category = mysqli_real_escape_string($conn, $_GET['category']);
+if ($kitchen_id <= 0) {
+    die("Invalid kitchen ID");
 }
 
-$kitchen_query = "SELECT cko.business_name, cko.customized_orders 
-                  FROM cloud_kitchen_owner cko 
-                  WHERE cko.user_id = $kitchen_id AND cko.is_approved = 1";
-$kitchen_result = mysqli_query($conn, $kitchen_query);
-$kitchen = mysqli_fetch_assoc($kitchen_result);
+try {
+    // Initialize and sanitize filter parameters
+    $search_term = isset($_GET['search']) ? trim($_GET['search']) : '';
+    $price_range = isset($_GET['price']) ? $_GET['price'] : 'all';
+    $current_category = isset($_GET['category']) ? $_GET['category'] : 'all';
+    
+    // Validate filter values
+    if (!in_array($price_range, ['all', 'low', 'medium', 'high'])) {
+        $price_range = 'all';
+    }
 
-$meals_query = "SELECT m.meal_id, m.name, m.description, m.price, m.photo, m.stock_quantity,
-                       GROUP_CONCAT(DISTINCT c.c_name SEPARATOR ', ') AS categories,
-                       GROUP_CONCAT(DISTINCT c.cat_id SEPARATOR ',') AS category_ids,
-                       GROUP_CONCAT(DISTINCT dt.tag_name SEPARATOR ', ') AS dietary_tags,
-                       LOWER(GROUP_CONCAT(DISTINCT dt.tag_name SEPARATOR '|||')) AS dietary_tags_search
-                FROM meals m
-                LEFT JOIN meal_category mc ON m.meal_id = mc.meal_id
-                LEFT JOIN category c ON mc.cat_id = c.cat_id
-                LEFT JOIN meal_dietary_tag mdt ON m.meal_id = mdt.meal_id
-                LEFT JOIN dietary_tags dt ON mdt.tag_id = dt.tag_id
-                WHERE m.cloud_kitchen_id = $kitchen_id AND m.visible = 1
-                GROUP BY m.meal_id";
-$meals_result = mysqli_query($conn, $meals_query);
-$meals = mysqli_fetch_all($meals_result, MYSQLI_ASSOC);
+    // Get kitchen details using prepared statement
+    $kitchen_query = "SELECT cko.business_name, cko.customized_orders 
+                     FROM cloud_kitchen_owner cko 
+                     WHERE cko.user_id = ? AND cko.is_approved = 1";
+    $kitchen_stmt = $conn->prepare($kitchen_query);
+    $kitchen_stmt->bind_param("i", $kitchen_id);
+    $kitchen_stmt->execute();
+    $kitchen_result = $kitchen_stmt->get_result();
+    $kitchen = $kitchen_result->fetch_assoc();
+    
+    if (!$kitchen) {
+        die("Kitchen not found or not approved");
+    }
 
-$specialized_categories_query = "SELECT DISTINCT c.cat_id, c.c_name 
-                                FROM category c
-                                JOIN cloud_kitchen_specialist_category cksc ON c.cat_id = cksc.cat_id
-                                WHERE cksc.cloud_kitchen_id = $kitchen_id";
-$specialized_categories_result = mysqli_query($conn, $specialized_categories_query);
-$specialized_categories = mysqli_fetch_all($specialized_categories_result, MYSQLI_ASSOC);
+    // Build meals query with filters
+    $meals_query = "SELECT m.meal_id, m.name, m.description, m.price, m.photo, m.stock_quantity,
+                           GROUP_CONCAT(DISTINCT c.c_name SEPARATOR ', ') AS categories,
+                           GROUP_CONCAT(DISTINCT c.cat_id SEPARATOR ',') AS category_ids,
+                           GROUP_CONCAT(DISTINCT dt.tag_name SEPARATOR ', ') AS dietary_tags,
+                           LOWER(GROUP_CONCAT(DISTINCT dt.tag_name SEPARATOR '|||')) AS dietary_tags_search
+                    FROM meals m
+                    LEFT JOIN meal_category mc ON m.meal_id = mc.meal_id
+                    LEFT JOIN category c ON mc.cat_id = c.cat_id
+                    LEFT JOIN meal_dietary_tag mdt ON m.meal_id = mdt.meal_id
+                    LEFT JOIN dietary_tags dt ON mdt.tag_id = dt.tag_id
+                    WHERE m.cloud_kitchen_id = ? AND m.visible = 1";
+    
+    // Add search filter if specified
+    if (!empty($search_term)) {
+        $meals_query .= " AND (m.name LIKE ? OR m.description LIKE ?)";
+    }
+    
+    // Add category filter if specified
+    if ($current_category !== 'all') {
+        $meals_query .= " AND c.cat_id = ?";
+    }
+    
+    // Add price range filter
+    switch ($price_range) {
+        case 'low':
+            $meals_query .= " AND m.price < 10";
+            break;
+        case 'medium':
+            $meals_query .= " AND m.price BETWEEN 10 AND 20";
+            break;
+        case 'high':
+            $meals_query .= " AND m.price > 20";
+            break;
+    }
+    
+    $meals_query .= " GROUP BY m.meal_id";
+    
+    // Prepare and execute meals query
+    $meals_stmt = $conn->prepare($meals_query);
+    
+    // Bind parameters based on filters
+    $param_types = "i";
+    $params = [$kitchen_id];
+    
+    if (!empty($search_term)) {
+        $search_param = "%{$search_term}%";
+        $param_types .= "ss";
+        array_push($params, $search_param, $search_param);
+    }
+    
+    if ($current_category !== 'all') {
+        $param_types .= "i";
+        array_push($params, (int)$current_category);
+    }
+    
+    $meals_stmt->bind_param($param_types, ...$params);
+    $meals_stmt->execute();
+    $meals_result = $meals_stmt->get_result();
+    $meals = $meals_result->fetch_all(MYSQLI_ASSOC);
 
-$meal_categories_query = "SELECT DISTINCT c.cat_id, c.c_name 
-                         FROM category c
-                         JOIN meal_category mc ON c.cat_id = mc.cat_id
-                         JOIN meals m ON mc.meal_id = m.meal_id
-                         WHERE m.cloud_kitchen_id = $kitchen_id";
-$meal_categories_result = mysqli_query($conn, $meal_categories_query);
-$meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
+    // Get specialized categories
+    $specialized_categories_query = "SELECT DISTINCT c.cat_id, c.c_name 
+                                   FROM category c
+                                   JOIN cloud_kitchen_specialist_category cksc ON c.cat_id = cksc.cat_id
+                                   WHERE cksc.cloud_kitchen_id = ?";
+    $spec_cat_stmt = $conn->prepare($specialized_categories_query);
+    $spec_cat_stmt->bind_param("i", $kitchen_id);
+    $spec_cat_stmt->execute();
+    $specialized_categories_result = $spec_cat_stmt->get_result();
+    $specialized_categories = $specialized_categories_result->fetch_all(MYSQLI_ASSOC);
+
+    // Get meal categories
+    $meal_categories_query = "SELECT DISTINCT c.cat_id, c.c_name 
+                            FROM category c
+                            JOIN meal_category mc ON c.cat_id = mc.cat_id
+                            JOIN meals m ON mc.meal_id = m.meal_id
+                            WHERE m.cloud_kitchen_id = ?";
+    $meal_cat_stmt = $conn->prepare($meal_categories_query);
+    $meal_cat_stmt->bind_param("i", $kitchen_id);
+    $meal_cat_stmt->execute();
+    $meal_categories_result = $meal_cat_stmt->get_result();
+    $meal_categories = $meal_categories_result->fetch_all(MYSQLI_ASSOC);
+
+    // Close statements
+    $kitchen_stmt->close();
+    $meals_stmt->close();
+    $spec_cat_stmt->close();
+    $meal_cat_stmt->close();
+
+} catch (Exception $e) {
+    // Log error and display user-friendly message
+    error_log("Database error: " . $e->getMessage());
+    die("An error occurred while loading the kitchen menu. Please try again later.");
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -153,7 +234,7 @@ $meal_categories = mysqli_fetch_all($meal_categories_result, MYSQLI_ASSOC);
                     </svg>
                     <span>Need something special? Request a customized order!</span>
                 </div> 
-                <a href="\NEW-TODAYS-MEAL\customer\Custom_Order\custom-order.php?kitchen_id=<?php echo $kitchen_id; ?>" style="text-decoration: none;">
+                <a href="/NEW-TODAYS-MEAL/customer/Custom_Order/custom-order.php?kitchen_id=<?php echo htmlspecialchars($kitchen_id); ?>&customer_id=<?php echo htmlspecialchars($user_id); ?>" style="text-decoration: none;">
                     <button class="custom-order-btn">Request Custom Order</button>
                 </a>
             </div>

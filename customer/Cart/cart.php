@@ -2,86 +2,99 @@
 session_start();
 require_once('../DB_connection.php');
 
-if (!isset($_SESSION['user_id'])) {
+// Ensure user is logged in and has a valid user ID
+if (empty($_SESSION['user_id']) || !is_numeric($_SESSION['user_id'])) {
     header("Location: /NEW-TODAYS-MEAL/Register&Login/login.php");
     exit();
 }
 
-// Show any redirect messages
-if (isset($_SESSION['redirect_reason'])) {
-    echo "<script>document.addEventListener('DOMContentLoaded', function() { 
-        showNotification('" . addslashes($_SESSION['redirect_reason']) . "', 'error');
-    });</script>";
+$user_id = (int)$_SESSION['user_id'];
+
+// Show any redirect messages safely
+if (!empty($_SESSION['redirect_reason'])) {
+    $msg = htmlspecialchars($_SESSION['redirect_reason'], ENT_QUOTES, 'UTF-8');
+    echo "<script>
+        document.addEventListener('DOMContentLoaded', function() { 
+            showNotification('{$msg}', 'error');
+        });
+    </script>";
     unset($_SESSION['redirect_reason']);
 }
-
-$user_id = $_SESSION['user_id'];
-
 
 // Initialize variables
 $emptyCart = true;
 $allCarts = [];
 $totalItems = 0;
 
-// Get all active carts for the user
-$cartsQuery = "SELECT c.cart_id, c.cloud_kitchen_id, cko.business_name 
-              FROM cart c
-              JOIN cloud_kitchen_owner cko ON c.cloud_kitchen_id = cko.user_id
-              WHERE c.customer_id = $user_id
-              ORDER BY c.created_at DESC";
+// Prepare statement to prevent SQL injection on $user_id
+$cartsQuery = "
+    SELECT c.cart_id, c.cloud_kitchen_id, cko.business_name 
+    FROM cart c
+    JOIN cloud_kitchen_owner cko ON c.cloud_kitchen_id = cko.user_id
+    WHERE c.customer_id = ?
+    ORDER BY c.created_at DESC
+";
 
-$cartsResult = mysqli_query($conn, $cartsQuery);
+if ($stmt = $conn->prepare($cartsQuery)) {
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $cartsResult = $stmt->get_result();
 
-if ($cartsResult && mysqli_num_rows($cartsResult) > 0) {
-    $emptyCart = false;
-    
-    // Process each cart
-    while ($cart = mysqli_fetch_assoc($cartsResult)) {
-        $cart_id = $cart['cart_id'];
-        $cloud_kitchen_name = $cart['business_name'];
-        $cloud_kitchen_id = $cart['cloud_kitchen_id'];
-        
-        // Initialize cart data
-        $cartData = [
-            'cart_id' => $cart_id,
-            'cloud_kitchen_name' => $cloud_kitchen_name,
-            'cloud_kitchen_id' => $cloud_kitchen_id,
-            'items' => [],
-            'subtotal' => 0,
-            'totalItems' => 0,
-            'hasOutOfStockItems' => false
-        ];
-        
-        // Get cart items with meal details
-        $itemsQuery = "SELECT ci.*, m.name, m.photo, m.status, m.stock_quantity, m.price as current_price
-                      FROM cart_items ci
-                      JOIN meals m ON ci.meal_id = m.meal_id
-                      WHERE ci.cart_id = {$cart['cart_id']}";
-        
-        $itemsResult = mysqli_query($conn, $itemsQuery);
-        
-        if ($itemsResult) {
-            $cartItems = mysqli_fetch_all($itemsResult, MYSQLI_ASSOC);
-            
-            // Calculate cart totals
-            foreach ($cartItems as $item) {
-                $itemTotal = $item['price'] * $item['quantity'];
-                $cartData['subtotal'] += $itemTotal;
-                $cartData['totalItems'] += $item['quantity'];
-                $totalItems += $item['quantity'];
-                
-                if ($item['status'] == 'out of stock' || $item['stock_quantity'] <= 0) {
-                    $cartData['hasOutOfStockItems'] = true;
+    if ($cartsResult && $cartsResult->num_rows > 0) {
+        $emptyCart = false;
+
+        while ($cart = $cartsResult->fetch_assoc()) {
+            $cart_id = $cart['cart_id'];
+            $cloud_kitchen_name = $cart['business_name'];
+            $cloud_kitchen_id = $cart['cloud_kitchen_id'];
+
+            $cartData = [
+                'cart_id' => $cart_id,
+                'cloud_kitchen_name' => $cloud_kitchen_name,
+                'cloud_kitchen_id' => $cloud_kitchen_id,
+                'items' => [],
+                'subtotal' => 0,
+                'totalItems' => 0,
+                'hasOutOfStockItems' => false,
+            ];
+
+            // Prepare statement to safely fetch cart items
+            $itemsQuery = "
+                SELECT ci.*, m.name, m.photo, m.status, m.stock_quantity, m.price AS current_price
+                FROM cart_items ci
+                JOIN meals m ON ci.meal_id = m.meal_id
+                WHERE ci.cart_id = ?
+            ";
+            if ($itemsStmt = $conn->prepare($itemsQuery)) {
+                $itemsStmt->bind_param("i", $cart_id);
+                $itemsStmt->execute();
+                $itemsResult = $itemsStmt->get_result();
+
+                if ($itemsResult) {
+                    $cartItems = $itemsResult->fetch_all(MYSQLI_ASSOC);
+
+                    foreach ($cartItems as $item) {
+                        $itemTotal = $item['price'] * $item['quantity'];
+                        $cartData['subtotal'] += $itemTotal;
+                        $cartData['totalItems'] += $item['quantity'];
+                        $totalItems += $item['quantity'];
+
+                        if (strtolower($item['status']) === 'out of stock' || (int)$item['stock_quantity'] <= 0) {
+                            $cartData['hasOutOfStockItems'] = true;
+                        }
+                    }
+                    $cartData['total'] = $cartData['subtotal'];
+                    $cartData['items'] = $cartItems;
                 }
+                $itemsStmt->close();
             }
-            
-            $cartData['total'] = $cartData['subtotal'];
-            $cartData['items'] = $cartItems;
-            
+
             $allCarts[] = $cartData;
         }
     }
+    $stmt->close();
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -230,13 +243,22 @@ if ($cartsResult && mysqli_num_rows($cartsResult) > 0) {
                         </div>
                     </div>
 
-                    <div class="cart-actions">
-                        <button class="checkout-btn btn btn-primary <?= $cartData['hasOutOfStockItems'] ? 'disabled' : '' ?>" 
-                                data-cart-id="<?= $cartData['cart_id'] ?>">
-                            Checkout Now
-                        </button>
-                        <a href="/NEW-TODAYS-MEAL/customer/Checkout_Codes/Order_Type/index.php?cart_id=<?= $cartData['cart_id'] ?>" class="btn btn-outline">Schedule Order</a>
-                    </div>
+                    <form method="POST" action="\NEW-TODAYS-MEAL\customer\Checkout_Codes\Meal_Planning\index.php" class="cart-actions">
+    <input type="hidden" name="cart_id" value="<?= htmlspecialchars($cartData['cart_id'], ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" name="customer_id" value="<?= htmlspecialchars($user_id, ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" name="cloud_kitchen_id" value="<?= htmlspecialchars($cartData['cloud_kitchen_id'], ENT_QUOTES, 'UTF-8') ?>">
+
+    <button type="submit" 
+            class="checkout-btn btn btn-primary <?= $cartData['hasOutOfStockItems'] ? 'disabled' : '' ?>" 
+            <?= $cartData['hasOutOfStockItems'] ? 'disabled' : '' ?>>
+        Checkout Now
+    </button>
+
+    <a href="/NEW-TODAYS-MEAL/customer/Checkout_Codes/Order_Type/index.php?cart_id=<?= urlencode($cartData['cart_id']) ?>" 
+       class="btn btn-outline">
+        Schedule Order
+    </a>
+</form>
                 </div>
                 <?php endforeach; ?>
             <?php endif; ?>

@@ -1,50 +1,77 @@
 <?php
 session_start();
-require_once('../DB_connection.php');
+require_once __DIR__ . '/../DB_connection.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: \NEW-TODAYS-MEAL\Register&Login\login.php");
+    header("Location: /NEW-TODAYS-MEAL/Register&Login/login.php");
     exit();
 }
-$user_id = $_SESSION['user_id'];
+
+$user_id = (int)$_SESSION['user_id'];
 
 if (isset($_GET['reset'])) {
     header("Location: index.php");
     exit();
 }
-$search_term = '';
-$category_id = isset($_GET['cat_id']) ? (int)$_GET['cat_id'] : '';
-$min_rating = isset($_GET['rating']) ? (float)$_GET['rating'] : 0; 
-$custom_filter = isset($_GET['custom_filter']) ? $_GET['custom_filter'] : 'all';
 
-if (isset($_GET['search'])) {
-    $search_term = mysqli_real_escape_string($conn, $_GET['search']);
-}
+try {
+    $search_term = isset($_GET['search']) ? trim($_GET['search']) : '';
+    $category_id = isset($_GET['cat_id']) ? (int)$_GET['cat_id'] : 0;
+    $min_rating = isset($_GET['rating']) ? (float)$_GET['rating'] : 0.0;
+    $custom_filter = isset($_GET['custom_filter']) ? $_GET['custom_filter'] : 'all';
+    
+    if (!in_array($custom_filter, ['all', 'custom', 'non-custom'])) {
+        $custom_filter = 'all';
+    }
 
-$query = "SELECT cko.user_id, cko.business_name, cko.average_rating, cko.start_year, cko.customized_orders, cko.years_of_experience
-          FROM cloud_kitchen_owner cko
-          LEFT JOIN cloud_kitchen_specialist_category cksc ON cko.user_id = cksc.cloud_kitchen_id
-          WHERE cko.is_approved = 1";
+    $query = "SELECT cko.user_id, cko.business_name, cko.average_rating, 
+                     cko.start_year, cko.customized_orders, cko.years_of_experience
+              FROM cloud_kitchen_owner cko
+              LEFT JOIN cloud_kitchen_specialist_category cksc ON cko.user_id = cksc.cloud_kitchen_id
+              WHERE cko.is_approved = 1";
 
-if ($category_id) {
-    $query .= " AND cksc.cat_id = $category_id";
-}
+    $params = [];
+    $types = '';
+    
+    if ($category_id > 0) {
+        $query .= " AND cksc.cat_id = ?";
+        $params[] = $category_id;
+        $types .= 'i';
+    }
+    
+    if (!empty($search_term)) {
+        $query .= " AND cko.business_name LIKE ?";
+        $params[] = "%{$search_term}%";
+        $types .= 's';
+    }
 
-if ($search_term) {
-    $query .= " AND cko.business_name LIKE '%$search_term%'";
-}
-$query .= " AND cko.average_rating >= $min_rating";
-
-if ($custom_filter === 'custom') {
-    $query .= " AND cko.customized_orders = 1";
-} elseif ($custom_filter === 'non-custom') {
-    $query .= " AND cko.customized_orders = 0";
-}
-$query .= " GROUP BY cko.user_id";
-
-$result = mysqli_query($conn, $query);
-$cloud_kitchens = mysqli_fetch_all($result, MYSQLI_ASSOC);
-?>
+    $query .= " AND cko.average_rating >= ?";
+    $params[] = $min_rating;
+    $types .= 'd';
+    
+    if ($custom_filter === 'custom') {
+        $query .= " AND cko.customized_orders = 1";
+    } elseif ($custom_filter === 'non-custom') {
+        $query .= " AND cko.customized_orders = 0";
+    }
+    
+    $query .= " GROUP BY cko.user_id";
+    $stmt = $conn->prepare($query);
+    
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+    
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $cloud_kitchens = $result->fetch_all(MYSQLI_ASSOC);
+    
+    $stmt->close();
+    
+} catch (Exception $e) {
+    error_log("Database error: " . $e->getMessage());
+    $cloud_kitchens = [];
+} ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

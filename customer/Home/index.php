@@ -1,32 +1,56 @@
 <?php
 session_start();
-require_once("..\DB_connection.php");
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: \NEW-TODAYS-MEAL\Register&Login\login.php");
+    header("Location: /NEW-TODAYS-MEAL/Register&Login/login.php");
     exit();
 }
-$user_id = $_SESSION['user_id'];
+$customer_id = $_SESSION['user_id'];
+
+require_once __DIR__ . '/../../DB_connection.php';
+if (!$conn) {
+    die("Database connection failed: " . mysqli_connect_error());
+}
 
 if (isset($_GET['ajax_search'])) {
-    $search_term = mysqli_real_escape_string($conn, $_GET['search']);
-    $category_query = "SELECT * FROM category WHERE c_name LIKE '%$search_term%'";
-    $category_result = mysqli_query($conn, $category_query);
-    $categories = mysqli_fetch_all($category_result, MYSQLI_ASSOC);
-    header('Content-Type: application/json');
-    echo json_encode($categories);
-    exit();
+    try {
+        $search_term = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $stmt = $conn->prepare("SELECT * FROM category WHERE c_name LIKE ?");
+        $search_param = "%{$search_term}%";
+        $stmt->bind_param("s", $search_param);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $categories = $result->fetch_all(MYSQLI_ASSOC);
+        
+        header('Content-Type: application/json');
+        echo json_encode($categories);
+        exit();
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error']);
+        exit();
+    }
 }
-
-$search_term = '';
-if (isset($_GET['search'])) {
-    $search_term = mysqli_real_escape_string($conn, $_GET['search']);
-    $category_query = "SELECT * FROM category WHERE c_name LIKE '%$search_term%'";
-} else {
-    $category_query = "SELECT * FROM category";
+try {
+    $search_term = '';
+    if (isset($_GET['search'])) {
+        $search_term = trim($_GET['search']);
+        $stmt = $conn->prepare("SELECT * FROM category WHERE c_name LIKE ?");
+        $search_param = "%{$search_term}%";
+        $stmt->bind_param("s", $search_param);
+    } else {
+        $stmt = $conn->prepare("SELECT * FROM category");
+    }
+    
+    $stmt->execute();
+    $category_result = $stmt->get_result();
+    $categories = $category_result->fetch_all(MYSQLI_ASSOC);
+} catch (Exception $e) {
+    die("Database error: " . $e->getMessage());
 }
-$category_result = mysqli_query($conn, $category_query);
-$categories = mysqli_fetch_all($category_result, MYSQLI_ASSOC);
+if (isset($stmt)) {
+    $stmt->close();
+}
 ?>
 
 <!DOCTYPE html>

@@ -1,129 +1,187 @@
 <?php
 session_start();
 require_once('../../DB_connection.php');
+$errors = [];
+$successMessage = '';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /NEW-TODAYS-MEAL/Register&Login/login.php");
     exit();
 }
 
-$userId = $_SESSION['user_id'];
+$userId = (int)$_SESSION['user_id'];
 
-if (!isset($_SESSION['cart_id'])) {
-    $_SESSION['redirect_reason'] = "Cart session expired.";
+if (!isset($_SESSION['cart_id']) || !is_numeric($_SESSION['cart_id'])) {
+    $stmtGetCart = $conn->prepare("SELECT cart_id FROM cart WHERE customer_id = ? ORDER BY created_at DESC LIMIT 1");
+    if ($stmtGetCart) {
+        $stmtGetCart->bind_param("i", $userId);
+        $stmtGetCart->execute();
+        $resultCart = $stmtGetCart->get_result();
+        if ($resultCart && $resultCart->num_rows > 0) {
+            $rowCart = $resultCart->fetch_assoc();
+            $_SESSION['cart_id'] = (int)$rowCart['cart_id'];
+        } else {
+            $_SESSION['redirect_reason'] = "Your cart is empty or expired.";
+            header("Location: /NEW-TODAYS-MEAL/customer/cart/cart.php");
+            exit();
+        }
+        $stmtGetCart->close();
+    } else {
+        $_SESSION['redirect_reason'] = "Unexpected database error. Please try again.";
+        header("Location: /NEW-TODAYS-MEAL/customer/cart/cart.php");
+        exit();
+    }
+}
+
+$cartId = (int)$_SESSION['cart_id'];
+
+$stmtCartCheck = $conn->prepare("SELECT 1 FROM cart WHERE cart_id = ? AND customer_id = ?");
+if ($stmtCartCheck) {
+    $stmtCartCheck->bind_param("ii", $cartId, $userId);
+    $stmtCartCheck->execute();
+    $stmtCartCheck->store_result();
+    if ($stmtCartCheck->num_rows === 0) {
+        $stmtCartCheck->close();
+        unset($_SESSION['cart_id']); // Clear invalid cart session
+        $_SESSION['redirect_reason'] = "Cart session expired or invalid. Please add items to your cart.";
+        header("Location: /NEW-TODAYS-MEAL/customer/cart/cart.php");
+        exit();
+    }
+    $stmtCartCheck->close();
+} else {
+    $_SESSION['redirect_reason'] = "Unexpected error. Please try again.";
     header("Location: /NEW-TODAYS-MEAL/customer/cart/cart.php");
     exit();
 }
 
-$cartId = $_SESSION['cart_id'];
 if (isset($_POST['save-details'])) {
-    $newPhone = $_POST['phone'] ?? '';
-    $newAddress = $_POST['address'] ?? '';
-    
-    if (empty($newPhone)) {
+    $newPhone = trim($_POST['phone'] ?? '');
+    $newAddress = trim($_POST['address'] ?? '');
+
+    if ($newPhone === '') {
         $errors[] = "Phone number is required";
     }
-    
-    if (empty($newAddress)) {
+
+    if ($newAddress === '') {
         $errors[] = "Address is required";
     }
-    
+
     if (empty($errors)) {
         $updatePhoneQuery = "UPDATE users SET phone = ? WHERE user_id = ?";
         $stmtPhone = $conn->prepare($updatePhoneQuery);
-        $stmtPhone->bind_param("si", $newPhone, $userId);
-        $stmtPhone->execute();
-        $stmtPhone->close();
-        
+        if (!$stmtPhone) {
+            $errors[] = "Database error updating phone.";
+        } else {
+            $stmtPhone->bind_param("si", $newPhone, $userId);
+            $stmtPhone->execute();
+            $stmtPhone->close();
+        }
+
         $updateAddressQuery = "UPDATE external_user SET address = ? WHERE user_id = ?";
         $stmtAddress = $conn->prepare($updateAddressQuery);
-        $stmtAddress->bind_param("si", $newAddress, $userId);
-        $stmtAddress->execute();
-        $stmtAddress->close();
-        
-        $successMessage = "Your details have been updated successfully!";
-        
-        $phone = $newPhone;
-        $address = $newAddress;
+        if (!$stmtAddress) {
+            $errors[] = "Database error updating address.";
+        } else {
+            $stmtAddress->bind_param("si", $newAddress, $userId);
+            $stmtAddress->execute();
+            $stmtAddress->close();
+        }
+
+        if (empty($errors)) {
+            $successMessage = "Your details have been updated successfully!";
+            $phone = $newPhone;
+            $address = $newAddress;
+        }
     }
 }
-$errors = [];
-$successMessage = '';
+
 $firstName = $email = $phone = $address = '';
 $isSubscribed = false;
-$cartItems = [];
-$subtotal = $deliveryFees = $total = 0;
 
-$deliveryType = 'all_at_once'; 
-$deliveryDate = $_SESSION['order_data']['deliveryDay'] ?? date('Y-m-d');
-
+// Get user details safely
 $query = "SELECT u.u_name, u.mail, u.phone, eu.address, c.is_subscribed
           FROM users u
           JOIN external_user eu ON u.user_id = eu.user_id
           LEFT JOIN customer c ON eu.user_id = c.user_id
           WHERE u.user_id = ?";
 $stmt = $conn->prepare($query);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-    $firstName = $user['u_name'];
-    $email = $user['mail'];
-    $phone = $user['phone'];
-    $address = $user['address'];
-    $isSubscribed = $user['is_subscribed'];
+if (!$stmt) {
+    $errors[] = "Database error retrieving user data.";
 } else {
-    $errors[] = "User not found or not a customer";
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        $firstName = $user['u_name'];
+        $email = $user['mail'];
+        $phone = $user['phone'];
+        $address = $user['address'];
+        $isSubscribed = (bool)$user['is_subscribed'];
+    } else {
+        $errors[] = "User not found or not a customer.";
+    }
+
+    $stmt->close();
 }
-$stmt->close();
+
+$cartItems = [];
 
 $query = "SELECT ci.*, m.name as meal_name, m.price, m.photo 
           FROM cart_items ci
           JOIN meals m ON ci.meal_id = m.meal_id
           WHERE ci.cart_id = ?";
 $stmt = $conn->prepare($query);
-$stmt->bind_param("i", $_SESSION['cart_id']);
-$stmt->execute();
-$result = $stmt->get_result();
-$cartItems = $result->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+if (!$stmt) {
+    $errors[] = "Database error retrieving cart items.";
+} else {
+    $stmt->bind_param("i", $cartId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $cartItems = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
 
-if (empty($cartItems)) {
-    $_SESSION['redirect_reason'] = "Your cart is empty.";
-    header("Location: /NEW-TODAYS-MEAL/customer/cart/cart.php");
-    exit();
+    if (empty($cartItems)) {
+        unset($_SESSION['cart_id']); 
+        $_SESSION['redirect_reason'] = "Your cart is empty.";
+        header("Location: /NEW-TODAYS-MEAL/customer/cart/cart.php");
+        exit();
+    }
 }
 
-$subtotal = 0;
+$subtotal = 0.0;
 foreach ($cartItems as $item) {
     $subtotal += $item['price'] * $item['quantity'];
 }
 
-$deliveryFees = 15.00; 
+$deliveryFees = 15.00;
 if ($isSubscribed) {
-    $query = "SELECT * FROM delivery_subscriptions 
+    $query = "SELECT 1 FROM delivery_subscriptions 
               WHERE customer_id = ? AND is_active = 1 AND end_date >= CURDATE()";
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $deliveryFees = 0.00;
+    if ($stmt) {
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $stmt->store_result();
+        if ($stmt->num_rows > 0) {
+            $deliveryFees = 0.00;
+        }
+        $stmt->close();
     }
-    $stmt->close();
 }
 
 $total = $subtotal + $deliveryFees;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place-order'])) {
-    $orderType = 'scheduled'; 
-    $deliveryZone = $_POST['delivery-zone'] ?? 'Cairo'; 
-    $paymentMethod = $_POST['payment-method'];
+$deliveryType = 'all_at_once';
+$deliveryDate = $_SESSION['order_data']['deliveryDay'] ?? date('Y-m-d');
 
-    if (!in_array($paymentMethod, ['cash', 'card'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place-order'])) {
+    $orderType = 'scheduled';
+    $deliveryZone = $_POST['delivery-zone'] ?? 'Cairo';
+    $paymentMethod = $_POST['payment-method'] ?? '';
+
+    if (!in_array($paymentMethod, ['cash', 'card'], true)) {
         $errors[] = "Invalid payment method.";
     }
 
@@ -131,84 +189,120 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place-order'])) {
               JOIN meals m ON ci.meal_id = m.meal_id
               WHERE ci.cart_id = ? LIMIT 1";
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("i", $_SESSION['cart_id']);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $cloudKitchen = $result->fetch_assoc();
-
-    if ($cloudKitchen) {
-        $cloudKitchenId = $cloudKitchen['cloud_kitchen_id'];
+    if (!$stmt) {
+        $errors[] = "Database error retrieving cloud kitchen information.";
     } else {
-        $errors[] = "Failed to retrieve cloud kitchen information.";
-    }
-    $stmt->close();
+        $stmt->bind_param("i", $cartId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $cloudKitchen = $result->fetch_assoc();
 
-
-if (empty($errors)) {
-    $insertOrderQuery = "INSERT INTO orders (customer_id, cloud_kitchen_id, total_price, ord_type, delivery_type, customer_selected_date, delivery_zone) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($insertOrderQuery);
-    $stmt->bind_param("iiissss", $userId, $cloudKitchenId, $total, $orderType, $deliveryType, $deliveryDate, $deliveryZone);
-
-    if ($stmt->execute()) {
-        $orderId = $stmt->insert_id;
-
-        foreach ($cartItems as $item) {
-            $insertOrderContentQuery = "INSERT INTO order_content (order_id, meal_id, quantity, price) VALUES (?, ?, ?, ?)";
-            $stmtOC = $conn->prepare($insertOrderContentQuery);
-            $stmtOC->bind_param("iiid", $orderId, $item['meal_id'], $item['quantity'], $item['price']);
-            $stmtOC->execute();
-            $stmtOC->close();
+        if ($cloudKitchen) {
+            $cloudKitchenId = (int)$cloudKitchen['cloud_kitchen_id'];
+        } else {
+            $errors[] = "Failed to retrieve cloud kitchen information.";
         }
-
-        $websiteRevenue = 0; 
-        $insertPaymentQuery = "INSERT INTO payment_details (order_id, total_ord_price, delivery_fees, website_revenue, total_payment, p_date_time, p_method) 
-                               VALUES (?, ?, ?, ?, ?, NOW(), ?)";
-        $stmtP = $conn->prepare($insertPaymentQuery);
-        $stmtP->bind_param("iddiss", $orderId, $subtotal, $deliveryFees, $websiteRevenue, $total, $paymentMethod);
-        $stmtP->execute();
-        $stmtP->close();
-
-        $placeholderStars = 0;
-        $insertReviewQuery = "INSERT INTO reviews (stars, order_id, cloud_kitchen_id, customer_id) 
-                              VALUES (?, ?, ?, ?)";
-        $stmtR = $conn->prepare($insertReviewQuery);
-        $stmtR->bind_param("iiii", $placeholderStars, $orderId, $cloudKitchenId, $userId);
-        $stmtR->execute();
-        $stmtR->close();
-
-        $updateKitchenOwnerQuery = "UPDATE cloud_kitchen_owner SET orders_count = orders_count + 1 WHERE user_id = ?";
-        $stmtUpdateOwner = $conn->prepare($updateKitchenOwnerQuery);
-        $stmtUpdateOwner->bind_param("i", $cloudKitchenId);
-        $stmtUpdateOwner->execute();
-        $stmtUpdateOwner->close();
-
-        $deleteCartItemsQuery = "DELETE FROM cart_items WHERE cart_id = ?";
-        $stmtDeleteItems = $conn->prepare($deleteCartItemsQuery);
-        $stmtDeleteItems->bind_param("i", $_SESSION['cart_id']);
-        $stmtDeleteItems->execute();
-        $stmtDeleteItems->close();
-
-        $deleteCartQuery = "DELETE FROM cart WHERE cart_id = ?";
-        $stmtDeleteCart = $conn->prepare($deleteCartQuery);
-        $stmtDeleteCart->bind_param("i", $_SESSION['cart_id']);
-        $stmtDeleteCart->execute();
-        $stmtDeleteCart->close();
-
-        unset($_SESSION['cart_id']);
-        unset($_SESSION['order_data']);
-
-        $_SESSION['order_success'] = true;
-        $_SESSION['order_id'] = $orderId;
-        header("Location: ..\..\Cart\cart.php");
-        exit();
-    } else {
-        $errors[] = "Failed to create order. Please try again.";
+        $stmt->close();
     }
-}
+
+    if (empty($errors)) {
+        $insertOrderQuery = "INSERT INTO orders 
+            (customer_id, cloud_kitchen_id, total_price, ord_type, delivery_type, customer_selected_date, delivery_zone) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($insertOrderQuery);
+        if (!$stmt) {
+            $errors[] = "Database error creating order.";
+        } else {
+            $stmt->bind_param(
+                "iiissss",
+                $userId,
+                $cloudKitchenId,
+                $total,
+                $orderType,
+                $deliveryType,
+                $deliveryDate,
+                $deliveryZone
+            );
+            if ($stmt->execute()) {
+                $orderId = $stmt->insert_id;
+
+                $insertOrderContentQuery = "INSERT INTO order_content (order_id, meal_id, quantity, price) VALUES (?, ?, ?, ?)";
+                $stmtOC = $conn->prepare($insertOrderContentQuery);
+                if (!$stmtOC) {
+                    $errors[] = "Database error inserting order content.";
+                } else {
+                    foreach ($cartItems as $item) {
+                        $stmtOC->bind_param("iiid", $orderId, $item['meal_id'], $item['quantity'], $item['price']);
+                        $stmtOC->execute();
+                    }
+                    $stmtOC->close();
+                }
+
+                $websiteRevenue = 0.00;
+                $insertPaymentQuery = "INSERT INTO payment_details 
+                    (order_id, total_ord_price, delivery_fees, website_revenue, total_payment, p_date_time, p_method) 
+                    VALUES (?, ?, ?, ?, ?, NOW(), ?)";
+                $stmtP = $conn->prepare($insertPaymentQuery);
+                if (!$stmtP) {
+                    $errors[] = "Database error inserting payment details.";
+                } else {
+                    $stmtP->bind_param("iddiss", $orderId, $subtotal, $deliveryFees, $websiteRevenue, $total, $paymentMethod);
+                    $stmtP->execute();
+                    $stmtP->close();
+                }
+
+                $placeholderStars = 0;
+                $insertReviewQuery = "INSERT INTO reviews (stars, order_id, cloud_kitchen_id, customer_id) VALUES (?, ?, ?, ?)";
+                $stmtR = $conn->prepare($insertReviewQuery);
+                if (!$stmtR) {
+                    $errors[] = "Database error inserting review.";
+                } else {
+                    $stmtR->bind_param("iiii", $placeholderStars, $orderId, $cloudKitchenId, $userId);
+                    $stmtR->execute();
+                    $stmtR->close();
+                }
+
+                $updateKitchenOwnerQuery = "UPDATE cloud_kitchen_owner SET orders_count = orders_count + 1 WHERE user_id = ?";
+                $stmtUpdateOwner = $conn->prepare($updateKitchenOwnerQuery);
+                if (!$stmtUpdateOwner) {
+                    $errors[] = "Database error updating cloud kitchen owner.";
+                } else {
+                    $stmtUpdateOwner->bind_param("i", $cloudKitchenId);
+                    $stmtUpdateOwner->execute();
+                    $stmtUpdateOwner->close();
+                }
+
+                $deleteCartItemsQuery = "DELETE FROM cart_items WHERE cart_id = ?";
+                $stmtDeleteItems = $conn->prepare($deleteCartItemsQuery);
+                if ($stmtDeleteItems) {
+                    $stmtDeleteItems->bind_param("i", $cartId);
+                    $stmtDeleteItems->execute();
+                    $stmtDeleteItems->close();
+                }
+
+                $deleteCartQuery = "DELETE FROM cart WHERE cart_id = ?";
+                $stmtDeleteCart = $conn->prepare($deleteCartQuery);
+                if ($stmtDeleteCart) {
+                    $stmtDeleteCart->bind_param("i", $cartId);
+                    $stmtDeleteCart->execute();
+                    $stmtDeleteCart->close();
+                }
+                unset($_SESSION['cart_id']);
+                unset($_SESSION['order_data']);
+
+                $_SESSION['order_success'] = true;
+                $_SESSION['order_id'] = $orderId;
+
+                header("Location: /NEW-TODAYS-MEAL/customer/Cart/cart.php");
+                exit();
+            } else {
+                $errors[] = "Failed to create order. Please try again.";
+            }
+            $stmt->close();
+        }
+    }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -374,8 +468,7 @@ if (empty($errors)) {
                     echo "<div style='font-size: 0.85em; color: #555;'>Quantity: {$quantity}</div>";
                     echo "</div>";
                     echo "</li>";
-                }
-                ?>
+                } ?>
               </ul>
               <div class="summary-details">
                 <div class="summary-item">

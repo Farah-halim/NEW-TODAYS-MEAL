@@ -2,11 +2,11 @@
 include "../DB_connection.php";
 session_start();
 
+// Ensure user is logged in and get user id
 if (!isset($_SESSION['user_id'])) {
-    header("Location: \NEW-TODAYS-MEAL\Register&Login\login.php");
+    header("Location: \\NEW-TODAYS-MEAL\\Register&Login\\login.php");
     exit();
 }
-
 $customer_id = $_SESSION['user_id'];
 
 $orders = [];
@@ -22,19 +22,19 @@ if ($conn) {
             JOIN users u ON co.customer_id = u.user_id
             WHERE co.customer_id = ?
             ORDER BY o.order_date DESC";
-    
+
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         die("Error preparing statement: " . $conn->error);
     }
-    
+
     $stmt->bind_param("i", $customer_id);
     if (!$stmt->execute()) {
         die("Error executing statement: " . $stmt->error);
     }
-    
+
     $result = $stmt->get_result();
-    
+
     while ($row = $result->fetch_assoc()) {
         // Check if order exists in payment table
         $payment_sql = "SELECT payment_status FROM payment_details 
@@ -43,14 +43,14 @@ if ($conn) {
         if (!$payment_stmt) {
             die("Error preparing payment statement: " . $conn->error);
         }
-        
+
         $payment_stmt->bind_param("i", $row['order_id']);
         if (!$payment_stmt->execute()) {
             die("Error executing payment statement: " . $payment_stmt->error);
         }
-        
+
         $payment_result = $payment_stmt->get_result();
-        
+
         if ($payment_result->num_rows > 0) {
             $payment_data = $payment_result->fetch_assoc();
             $row['payment_exists'] = true;
@@ -61,7 +61,7 @@ if ($conn) {
             $row['order_status'] = null; // Hide order_status if no payment
         }
         $payment_stmt->close();
-        
+
         // Status mapping for customized orders
         if ($row['customer_approval'] == 'approved') {
             $row['status'] = 'price_accepted';
@@ -74,10 +74,10 @@ if ($conn) {
         } else {
             $row['status'] = 'pending';
         }
-        
+
         $orders[] = $row;
     }
-    
+
     $stmt->close();
 }
 ?>

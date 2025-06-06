@@ -2,11 +2,11 @@
 session_start();
 require_once('../DB_connection.php');
 
+// Ensure the user is logged in and save their ID
 if (!isset($_SESSION['user_id'])) {
     header("Location: \\NEW-TODAYS-MEAL\\Register&Login\\login.php");
     exit();
 }
-
 $user_id = $_SESSION['user_id'];
 
 // Handle rating form submission
@@ -37,7 +37,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
         }
 
-        // Redirect to remove POST data and prevent resubmission
+        // Calculate new average rating for the kitchen
+        $avg_query = "SELECT AVG(stars) AS avg_rating FROM reviews WHERE cloud_kitchen_id = ?";
+        $avg_stmt = $conn->prepare($avg_query);
+        $avg_stmt->bind_param("i", $kitchen_id);
+        $avg_stmt->execute();
+        $avg_result = $avg_stmt->get_result();
+        $avg_row = $avg_result->fetch_assoc();
+        $average_rating = round($avg_row['avg_rating'], 2);
+        $avg_stmt->close();
+
+        // Update cloud_kitchen_owner average_rating
+        $update_avg_stmt = $conn->prepare("UPDATE cloud_kitchen_owner SET average_rating = ? WHERE user_id = ?");
+        $update_avg_stmt->bind_param("di", $average_rating, $kitchen_id);
+        $update_avg_stmt->execute();
+        $update_avg_stmt->close();
+
+        // Redirect to prevent form resubmission
+        $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
         header("Location: " . $_SERVER['PHP_SELF'] . ($filter !== 'all' ? "?filter=$filter" : ""));
         exit();
     }
@@ -66,6 +83,8 @@ if ($customer_result->num_rows > 0) {
     $phone = '';
 }
 
+// The rest of code as per provided context goes here unchanged...
+
 // Filter for order list
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
 $status_conditions = [
@@ -77,7 +96,7 @@ $status_conditions = [
 ];
 $status_condition = $status_conditions[$filter] ?? "";
 
-// Check if we need to show order details modal
+// Check if need to show order details modal
 $show_order_details = isset($_GET['view_order']);
 $order_details = null;
 if ($show_order_details) {
@@ -108,7 +127,7 @@ if ($show_order_details) {
     }
 }
 
-// Check if we need to show rating modal
+// Check if need to show rating modal
 $show_rating_modal = isset($_GET['rate_order']);
 $rating_order = null;
 if ($show_rating_modal) {
@@ -204,10 +223,10 @@ foreach ($orders as &$order) {
     }
 
     $order['show_items'] = (isset($_GET['show_items']) && (int)$_GET['show_items'] === $order['order_id'] && (!isset($_GET['hide_items']) || (int)$_GET['hide_items'] !== $order['order_id']));
-    
+
     $order['delivery_type'] = $order['delivery_type'] ?? 'all_at_once';
     $order['customer_selected_date'] = $order['customer_selected_date'] ?? null;
-    
+
     $order['status_class'] = $status_map[$order['order_status']] ?? 'preparing';
 }
 unset($order);
