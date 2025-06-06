@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['current_password'])) 
 
 <header class="navbar-header">
     <div class="navbar-logo">
-        <h1 class="navbar-heading">𝓒𝓵𝓸𝓾𝓭 𝓚𝓲𝓽𝓬𝓱𝓮𝓷</h1>
+        <h1 class="navbar-heading">𝓣𝓸𝓭𝓪𝔂'𝓼 𝓶𝓮𝓪𝓵</h1>
     </div>
     <button class="navbar-mobile-menu-button" id="navbar-mobile-menu-btn" aria-label="Toggle menu">
         <img src="global/images/dropdown-menu.png" alt="menu" width="19" height="19" style="margin-right: 5px; vertical-align: middle;">
