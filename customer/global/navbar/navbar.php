@@ -1,9 +1,5 @@
 <?php
-if (!isset($_SESSION['user_id'])) {
-    header("Location: /NEW-TODAYS-MEAL/Register&Login/login.php");
-    exit();
-}
-$user_id = $_SESSION['user_id'];
+
 ?>
 <header class="header">
         <div class="logo">
