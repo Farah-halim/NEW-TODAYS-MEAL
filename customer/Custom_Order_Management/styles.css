@@ -91,7 +91,7 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     background-color: #dab98b;
-    color: #374151;
+    color: #000000;
 }
 
 .filter-btn:hover {
@@ -99,7 +99,7 @@ body {
 }
 
 .filter-btn.active {
-    background-color: #8B7355;
+    background-color: #f5e0c2;
     color: white;
 }
 

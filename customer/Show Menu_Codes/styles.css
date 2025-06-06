@@ -58,7 +58,7 @@ body {
 /* Custom Order Banner */
 .custom-order-banner {
     background: #f5e0c2;
-    border: 2px solid #E67E22;
+    border: 2px solid #e57e24;
     border-radius: 12px;
     margin-bottom: 24px;
     padding: 16px;
@@ -98,13 +98,14 @@ body {
 }
 
 .custom-order-btn:hover {
-    background: #D35400;
+    background: #e57e24;
 }
 
 /* Search Card */
 .search-card {
     background: white;
     border-radius: 12px;
+    border: #e57e24;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
     padding: 16px;
@@ -175,15 +176,15 @@ body {
     padding: 12px 24px;
     border: none;
     border-radius: 8px;
-    background: #D2B48C;
-    color: #8B4513;
+    background: #f5e0c2;
+    color: #6a4125;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .category-btn:hover, .category-btn.active {
-    background: #E67E22;
+    background: #e57e24;
     color: white;
 }
 
@@ -252,7 +253,7 @@ body {
 .item-price {
     font-size: 1.25rem;
     font-weight: bold;
-    color: #E67E22;
+    color: #e57e24;
 }
 
 .add-to-cart-btn {
@@ -260,7 +261,7 @@ body {
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    background: #E67E22;
+    background: #e57e24;
     color: white;
     border: none;
     border-radius: 8px;
@@ -270,7 +271,7 @@ body {
 }
 
 .add-to-cart-btn:hover {
-    background: #D35400;
+    background: #f5e0c2;
 }
 
 .cart-icon {

@@ -33,7 +33,7 @@ body {
 }
 
 .item-count {
-    background-color: #E8DDD4;
+    background-color: #dab98b;
     border-radius: 9999px;
     padding: 8px 16px;
     display: flex;
@@ -72,15 +72,15 @@ body {
 }
 
 .caterer-header {
-    background-color: #F8E8E0;
+    background-color: #dab98b;
     padding: 16px 24px;
-    border-bottom: 1px solid #E8DDD4;
+    border-bottom: 1px solid #6a4125;
 }
 
 .caterer-header h2 {
     font-size: 18px;
     font-weight: 500;
-    color: #5D4037;
+    color: #6a4125;
 }
 
 /* Out of Stock Warning */
@@ -108,12 +108,12 @@ body {
 
 /* Cart Items */
 .cart-items {
-    border-top: 1px solid #E8DDD4;
+    border-top: 1px solid #dab98b;
 }
 
 .cart-item {
     padding: 24px;
-    border-bottom: 1px solid #E8DDD4;
+    border-bottom: 1px solid #dab98b;
     display: flex;
     align-items: center;
     gap: 16px;
@@ -216,7 +216,7 @@ body {
 
 .item-total {
     font-weight: 600;
-    color: #5D4037;
+    color: #6a4125;
 }
 
 .remove-btn {
@@ -240,7 +240,7 @@ body {
 
 /* Group Summary */
 .group-summary {
-    background-color: #F9FAFB;
+    background-color: #fff7e5;
     padding: 16px 24px;
 }
 
