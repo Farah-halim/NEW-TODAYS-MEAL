@@ -65,7 +65,7 @@ if (isset($_SESSION['user_id'])) {
                 <span class="nav-text">Orders</span>
             </a>
             <a href="./catering.php" class="nav-item">   
-                <span class="nav-icon"><img width="20" height="20" src="global/images/catering.png" alt="purchase-order"/></span>
+                <span class="nav-icon"><img width="20" height="20" src="https://img.icons8.com/?size=100&id=mp8gOAkZetIl&format=png&color=000000" alt="purchase-order"/></span>
                 <span class="nav-text">Catering</span>
             </a>
             <a href="./meal_management.php" class="nav-item">
@@ -78,7 +78,7 @@ if (isset($_SESSION['user_id'])) {
             </a>
         </nav>
         <button class="settings-button" id="settings-btn">
-            <img src="global/images/setting_icon.png" alt="Settings" class="settings-icon">
+            <img src="https://img.icons8.com/?size=100&id=UXWIv5G5mWsK&format=png&color=6a4125" alt="Settings" class="settings-icon">
         </button>
     </header>
     
