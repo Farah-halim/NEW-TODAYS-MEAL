@@ -544,7 +544,12 @@ foreach ($package['meals'] as $meal) {
                             <div class="package-meals">
                                 <?php foreach ($package['meals'] as $meal): ?>
                                     <div class="meal-item">
-                                        <img src="<?= htmlspecialchars($meal['meal_image']) ?>" alt="<?= htmlspecialchars($meal['meal_name']) ?>" class="meal-image">
+                                        <img 
+                                            src="../../../uploads/meals/<?= htmlspecialchars(basename($meal['meal_image'])) ?>" 
+                                            alt="<?= htmlspecialchars($meal['meal_name']) ?>" 
+                                            class="meal-image"
+                                            onerror="this.onerror=null;this.src='../uploads/default-meal.jpg';"
+                                        >
                                         <div class="meal-details">
                                             <div class="meal-name">
                                                 <?= $meal['quantity'] > 1 ? $meal['quantity'] . 'x ' : '' ?>

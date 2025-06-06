@@ -322,7 +322,7 @@ $stmtR->close();
               <h2 class="order-summary-title">Order Summary</h2>
               <ul style="list-style: none; padding-left: 0;">
                 <?php
-                $imagePath = '../../../../uploads/meals/';
+                $imagePath = '../../../uploads/meals/';
                 foreach ($cartItems as $item) {
                     $mealImage = htmlspecialchars($imagePath . $item['photo']);
                     $mealName = htmlspecialchars($item['meal_name']);

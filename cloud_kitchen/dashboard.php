@@ -33,13 +33,14 @@ $_SESSION['cloud_kitchen_id'] = $user['cloud_kitchen_id'];
 // Get today's date for filtering orders
 $today = date('Y-m-d');
 
-// Get latest 5 orders for this cloud kitchen
-$orders_query = "SELECT o.order_id, o.total_price, o.ord_type, o.order_date, o.order_status, 
+// Get latest 5 orders for this cloud kitchen that have payment details
+$orders_query = "SELECT o.order_id, pd.total_ord_price AS total_price, o.ord_type, o.order_date, o.order_status, 
                         o.delivery_type, c.u_name AS customer_name, co.ord_description AS custom_description
                  FROM orders o
                  JOIN customer cust ON o.customer_id = cust.user_id
                  JOIN users c ON cust.user_id = c.user_id
                  LEFT JOIN customized_order co ON o.order_id = co.order_id
+                 JOIN payment_details pd ON o.order_id = pd.order_id  -- Changed from LEFT JOIN to JOIN to ensure payment exists
                  WHERE o.cloud_kitchen_id = ?
                  ORDER BY o.order_date DESC
                  LIMIT 5";
@@ -97,14 +98,15 @@ foreach ($orders as &$order) {
 }
 unset($order);
 
-// Calculate today's revenue and order counts
+// Calculate today's revenue and order counts (only for orders with payment details)
 $stats_query = "SELECT 
-                SUM(CASE WHEN DATE(o.order_date) = ? THEN o.total_price ELSE 0 END) AS today_revenue,
+                SUM(CASE WHEN DATE(o.order_date) = ? THEN pd.total_ord_price ELSE 0 END) AS today_revenue,
                 COUNT(CASE WHEN DATE(o.order_date) = ? THEN 1 ELSE NULL END) AS today_orders,
                 COUNT(CASE WHEN DATE(o.order_date) = ? AND o.order_status = 'delivered' THEN 1 ELSE NULL END) AS completed_orders,
                 COUNT(CASE WHEN DATE(o.order_date) = ? AND o.order_status IN ('pending', 'preparing', 'ready_for_pickup', 'in_transit') THEN 1 ELSE NULL END) AS pending_orders,
                 (SELECT COUNT(*) FROM meals WHERE cloud_kitchen_id = ? AND status = 'out of stock') AS out_of_stock
                 FROM orders o
+                JOIN payment_details pd ON o.order_id = pd.order_id  -- Changed from LEFT JOIN to JOIN to ensure payment exists
                 WHERE o.cloud_kitchen_id = ?";
 $stats_stmt = $conn->prepare($stats_query);
 $stats_stmt->bind_param("ssssii", $today, $today, $today, $today, $user['cloud_kitchen_id'], $user['cloud_kitchen_id']);

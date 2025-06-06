@@ -283,13 +283,17 @@ if ($conn) {
                     </div>
 
                     <?php if (!empty($order['img_reference'])): ?>
-                    <div class="reference-section">
-                        <div class="section-header">
-                            <img src="https://img.icons8.com/?size=100&id=112856&format=png&color=000000" alt="Image" class="section-icon">
-                            <h4>Reference Image</h4>
+                        <div class="reference-section">
+                            <div class="section-header">
+                                <img src="https://img.icons8.com/?size=100&id=112856&format=png&color=000000" alt="Image" class="section-icon">
+                                <h4>Reference Image</h4>
+                            </div>
+                            <img 
+                                src="../../uploads/custom_orders/<?= htmlspecialchars(basename($order['img_reference'])) ?>" 
+                                alt="Design Reference" 
+                                class="reference-image"
+                            >
                         </div>
-                        <img src="<?= htmlspecialchars($order['img_reference']) ?>" alt="Design Reference" class="reference-image">
-                    </div>
                     <?php endif; ?>
 
                     <?php if ($show_price_quote): ?>

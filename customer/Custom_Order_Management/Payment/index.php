@@ -108,11 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute();
             $stmt->close();
 
-            // 2. Update order info (delivery zone)
+            // 2. Update order info (delivery zone and total price)
             $stmt = $conn->prepare("UPDATE orders 
-                                    SET delivery_zone = ? 
+                                    SET delivery_zone = ?, total_price = ?
                                     WHERE order_id = ? AND customer_id = ?");
-            $stmt->bind_param("sii", $address, $orderId, $_SESSION['user_id']);
+            $stmt->bind_param("sdii", $address, $total, $orderId, $_SESSION['user_id']);
             $stmt->execute();
             $stmt->close();
 
@@ -135,7 +135,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->commit();
 
-            header("Location: ../index.php?order_id=$orderId");
+            // Store success message in session for display after redirect
+            header("Location: ../index.php?order_id=$orderId&payment_success=1");
             exit();
 
         } catch (Exception $e) {
@@ -155,10 +156,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="description" content="Review your order and complete payment for your food delivery." />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 <?php include '../../global/navbar/navbar.php'; ?>
 
+<!-- Check for success message and show popup -->
+<?php if (isset($_GET['payment_success']) && $_GET['payment_success'] == 1): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Payment successful! Your order has been placed.',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Remove the success parameter from URL
+                    window.location.href = window.location.pathname + '?order_id=<?= htmlspecialchars($orderId) ?>';
+                }
+            });
+        });
+    </script>
+<?php endif; ?>
 <!-- Checkout Header -->
 <div class="checkout-header">
     <h1>Checkout</h1>

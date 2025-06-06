@@ -12,11 +12,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = "Please fill in all fields.";
     } else {
         $sql = "SELECT u.*, eu.ext_role, cko.is_approved AS kitchen_approved, 
-               dm.is_approved AS delivery_approved 
+               dm.is_approved AS delivery_approved,
+               c.status AS customer_status,
+               cko.status AS kitchen_status,
+               dm.status AS delivery_status
                FROM users u
                LEFT JOIN external_user eu ON u.user_id = eu.user_id
                LEFT JOIN cloud_kitchen_owner cko ON eu.user_id = cko.user_id
                LEFT JOIN delivery_man dm ON u.user_id = dm.user_id
+               LEFT JOIN customer c ON eu.user_id = c.user_id
                WHERE u.mail = ?";
         
         $stmt = $conn->prepare($sql);
@@ -28,7 +32,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $user = $result->fetch_assoc();
             
             if (password_verify($password, $user['password'])) {
-                if ($user['u_role'] == 'delivery_man' && !$user['delivery_approved']) {
+                // Check if user is blocked
+                if ($user['u_role'] == 'external_user' && $user['ext_role'] == 'customer' && $user['customer_status'] == 'blocked') {
+                    $error = "Your account has been blocked. Please contact support.";
+                } 
+                elseif ($user['u_role'] == 'external_user' && $user['ext_role'] == 'cloud_kitchen_owner' && $user['kitchen_status'] == 'blocked') {
+                    $error = "Your cloud kitchen account has been blocked. Please contact support.";
+                } 
+                elseif ($user['u_role'] == 'delivery_man' && $user['delivery_status'] == 'blocked') {
+                    $error = "Your delivery account has been blocked. Please contact support.";
+                }
+                // Check approval status (existing code)
+                elseif ($user['u_role'] == 'delivery_man' && !$user['delivery_approved']) {
                     $error = "Your account is pending admin approval. Please wait for confirmation.";
                 } 
                 elseif ($user['u_role'] == 'external_user' && $user['ext_role'] == 'cloud_kitchen_owner' && !$user['kitchen_approved']) {
