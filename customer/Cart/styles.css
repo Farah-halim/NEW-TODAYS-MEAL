@@ -33,7 +33,7 @@ body {
 }
 
 .item-count {
-    background-color: #dab98b;
+    background-color: #f5e0c2;
     border-radius: 9999px;
     padding: 8px 16px;
     display: flex;
@@ -72,9 +72,9 @@ body {
 }
 
 .caterer-header {
-    background-color: #dab98b;
+    background-color: #f5e0c2;
     padding: 16px 24px;
-    border-bottom: 1px solid #6a4125;
+    border-bottom: 1px solid #f5e0c2;
 }
 
 .caterer-header h2 {
@@ -108,12 +108,13 @@ body {
 
 /* Cart Items */
 .cart-items {
-    border-top: 1px solid #dab98b;
+    border-bottom: 2px solid #f5e0c2;
+
 }
 
 .cart-item {
     padding: 24px;
-    border-bottom: 1px solid #dab98b;
+    border-top: 2px solid #f5e0c2;
     display: flex;
     align-items: center;
     gap: 16px;
@@ -240,7 +241,7 @@ body {
 
 /* Group Summary */
 .group-summary {
-    background-color: #fff7e5;
+    background-color: white;
     padding: 16px 24px;
 }
 
@@ -257,7 +258,6 @@ body {
 }
 
 .group-total-row {
-    border-top: 1px solid #E8DDD4;
     padding-top: 8px;
     margin-top: 8px;
 }
@@ -275,7 +275,7 @@ body {
 .cart-actions {
     padding: 24px;
     background: white;
-    border-top: 1px solid #E8DDD4;
+    border-top: 2px solid #f5e0c2;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;

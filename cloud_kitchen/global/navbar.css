@@ -1,10 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
 .header {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   padding: 0 57px;
   height: 64px;
-  background-color: rgb(255, 255, 255);
+  background-color: #6a4125;
 }
 
 .logo {
@@ -13,7 +19,7 @@
 
 .logo .heading {
   font-weight: 700;
-  color: #6a4125;
+  color: #fff7e5;
   font-size: 20.4px;
   margin: 0;
 }
@@ -29,7 +35,7 @@
   display: flex;
   align-items: center;
   text-decoration: none;
-  color: #6a4125;
+  color: #fff7e5;
   font-weight: 600;
   font-size: 13px;
   padding: 0 11px;
@@ -73,32 +79,33 @@
   transition: background-color 0.3s ease;
 }
 
-
 .nav-item:hover .nav-icon,
 .nav-item.active .nav-icon {
-filter: brightness(0) saturate(100%) invert(56%) sepia(95%) saturate(1731%) hue-rotate(346deg) brightness(97%) contrast(96%);
+  filter: brightness(0) saturate(100%) invert(56%) sepia(95%) saturate(1731%) hue-rotate(346deg) brightness(97%) contrast(96%);
 }
 
 .nav-icon.dashboard {
-  background-image: url(images/home_icon.svg);
+  background-image: url(https://img.icons8.com/?size=100&id=2797&format=png&color=FFFFFF);
 }
 
 .nav-icon.inventory {
-background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-4.svg);
+  background-image: url(https://img.icons8.com/?size=100&id=fMTxytaZHTHp&format=png&color=FFFFFF);
 }
 
 .nav-icon.orders {
-background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-15.svg);
+  background-image: url(https://img.icons8.com/?size=100&id=qP17ftfJdw0t&format=png&color=FFFFFF);
+}
+.nav-icon.catering {
+  background-image: url(https://img.icons8.com/?size=100&id=i2Os176poVX1&format=png&color=FFFFFF);
 }
 
 .nav-icon.meals {
-background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame.svg);
+  background-image: url(https://img.icons8.com/?size=100&id=UliLquvnc82U&format=png&color=FFFFFF);
 }
 
 .nav-icon.support {
-background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
+  background-image: url(https://img.icons8.com/?size=100&id=1361&format=png&color=FFFFFF);
 }
-
 
 .settings-button {
   background: none;
@@ -170,7 +177,7 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   margin-right: 12px;
   fill: currentColor;
 }
-/* Base Popup Styles */
+
 .popup {
   display: none;
   position: fixed;
@@ -189,15 +196,16 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
 }
 
 .popup-content {
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 8px;
-    width: 100%;
-    max-width: 500px;
-    max-height: 60vh;
-    overflow-y: auto;
-    position: relative;
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 60vh;
+  overflow-y: auto;
+  position: relative;
 }
+
 .popup h2 {
   color: #000000;
   margin-bottom: 30px;
@@ -205,13 +213,12 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   padding: 0 30px;
 }
 
-/* Form Elements (Consolidated .form-group and .form-pop-group) */
-.form-group, 
+.form-group,
 .form-pop-group {
   margin-bottom: 15px;
 }
 
-.form-group label, 
+.form-group label,
 .form-pop-group label {
   display: block;
   margin-bottom: 5px;
@@ -219,7 +226,7 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   font-size: 10px;
 }
 
-.form-group input, 
+.form-group input,
 .form-pop-group input {
   width: 90%;
   margin-bottom: 10px;
@@ -229,15 +236,14 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   font-size: 12px;
 }
 
-.form-group input[readonly], 
+.form-group input[readonly],
 .form-pop-group input[readonly] {
   background-color: #f0f0f04d;
   color: #1f1d1dcc;
 }
 
-/* Buttons */
-.edit-btn, 
-.save-btn, 
+.edit-btn,
+.save-btn,
 .cancel-btn {
   padding: 8px 15px;
   border-radius: 4px;
@@ -247,16 +253,16 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   margin-left: 70%;
 }
 
-.edit-btn, 
+.edit-btn,
 .cancel-btn {
-    margin-left: 83%;
-    background-color: #ffffff;
-    color: #345028;
-    padding: 10px 24px;
-    border: 1px solid #345028;
+  margin-left: 83%;
+  background-color: #ffffff;
+  color: #345028;
+  padding: 10px 24px;
+  border: 1px solid #345028;
 }
 
-.edit-btn:hover, 
+.edit-btn:hover,
 .cancel-btn:hover {
   background-color: #345028;
   color: #ffffff;
@@ -278,7 +284,7 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   transform: translateY(0);
 }
 
-.save-btn.loading, 
+.save-btn.loading,
 .save-btn.saved {
   cursor: not-allowed;
 }
@@ -292,7 +298,6 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   background-color: #345028;
 }
 
-/* Form Actions */
 .form-actions {
   position: relative;
   height: 40px;
@@ -304,8 +309,7 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   right: 20px;
 }
 
-/* Close/Back Buttons */
-.close-btn, 
+.close-btn,
 .back-btn {
   position: absolute;
   top: 10px;
@@ -318,7 +322,7 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   transition: color 0.3s ease;
 }
 
-.close-btn:hover, 
+.close-btn:hover,
 .back-btn:hover {
   color: #e57e24;
 }
@@ -328,7 +332,6 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   left: 20px;
 }
 
-/* Loading Indicators */
 .loader {
   border: 2px solid #f3f3f3;
   border-top: 2px solid #345028;
@@ -345,11 +348,15 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-/* Radio Groups */
 .radio-group {
   display: flex;
   justify-content: flex-start;
@@ -362,12 +369,11 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   gap: 5px;
 }
 
-/* Mobile Menu Button */
 .mobile-menu-button {
   display: none;
   background: none;
   border: none;
-  color: #6a4125;
+  color: #fff7e5;
   font-size: 15px;
   cursor: pointer;
   padding: 8px 20px;
@@ -401,7 +407,6 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
   filter: invert(57%) sepia(83%) saturate(1395%) hue-rotate(346deg) brightness(96%) contrast(95%);
 }
 
-/* Responsive Styles */
 @media (max-width: 960px) {
   .header {
     padding: 0 10px;
@@ -431,7 +436,7 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
     background: white;
     flex-direction: column;
     padding: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     min-width: 180px;
   }
@@ -488,18 +493,18 @@ background-image: url(https://c.animaapp.com/m9lp78jyHFl4Jh/img/frame-10.svg);
     padding: 0 25px;
   }
 
-  .form-group label, 
+  .form-group label,
   .form-pop-group label {
     font-size: 9px;
   }
 
-  .form-group input, 
+  .form-group input,
   .form-pop-group input {
     font-size: 11px;
   }
 
-  .edit-btn, 
-  .cancel-btn, 
+  .edit-btn,
+  .cancel-btn,
   .save-btn {
     font-size: 12px;
     padding: 6px 12px;

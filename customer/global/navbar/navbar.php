@@ -7,7 +7,7 @@ $user_id = $_SESSION['user_id'];
 ?>
 <header class="header">
         <div class="logo">
-            <h1 class="heading"> 𝓣𝓸𝓭𝓪𝔂'𝓼 𝓜𝓮𝓪𝓵 </h1>
+            <h1 class="heading"> 𝓒𝓵𝓸𝓾𝓭 𝓚𝓲𝓽𝓬𝓱𝓮𝓷 </h1>
         </div>
         <button class="mobile-menu-button">
             <img src="global/images/dropdown-menu.png" alt="menu" width="19" height="19" style="margin-right: 5px; vertical-align: middle;">

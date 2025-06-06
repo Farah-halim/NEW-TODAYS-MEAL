@@ -170,6 +170,7 @@ body {
   margin-right: 8px;
 }
 
+
 .view-menu-btn {
   display: block;
   width: 100%;
@@ -184,7 +185,7 @@ body {
 }
 
 .view-menu-btn:hover {
-  background: #e57e24;
+  background: #bd4a08;
 }
 
 .no-results {
@@ -208,10 +209,6 @@ body {
   margin: 0;
 }
 
-.hidden {
-  display: none !important;
-}
-
 .custom-order-btn {
   display: block;
   width: 100%;
@@ -222,10 +219,11 @@ body {
   text-decoration: none;
   border-radius: 10px;
   font-weight: 600;
-  margin-bottom: 8px;
   transition: background-color 0.3s;
 }
-
 .custom-order-btn:hover {
-  background: #e57e24;
+  background: #e57e24; 
+}
+.hidden {
+  display: none !important;
 }

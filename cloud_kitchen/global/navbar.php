@@ -45,7 +45,7 @@ if (isset($_SESSION['user_id'])) {
 <div class="container">
     <header class="header">
         <div class="logo">
-            <h1 class="heading">Cloud Kitchen</h1>
+            <h1 class="heading">𝓒𝓵𝓸𝓾𝓭 𝓚𝓲𝓽𝓬𝓱𝓮𝓷</h1>
         </div>
         <button class="mobile-menu-button">
             <img src="global/images/dropdown-menu.png" alt="menu" width="19" height="19" style="margin-right: 5px; vertical-align: middle;">

@@ -11,10 +11,12 @@ body {
     color: #8B4513;
     line-height: 1.6;
     min-height: 100vh;
-     display: flex;
+    display: flex;
     flex-direction: column;
 }
-
+.header {
+  flex-shrink: 0;
+}
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -22,38 +24,6 @@ body {
     flex: 1;
 }
 
-/* Header */
-.header {
-    margin-bottom: 24px;
-}
-
-.nav-section {
-    margin-bottom: 16px;
-}
-
-.nav-link {
-    display: flex;
-    align-items: center;
-    color: #A0522D;
-    text-decoration: none;
-    transition: color 0.2s;
-}
-
-.nav-link:hover {
-    color: #8B4513;
-}
-
-.icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
-}
-
-.page-title {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #8B4513;
-}
 
 /* Custom Order Banner */
 .custom-order-banner {
@@ -87,18 +57,23 @@ body {
 }
 
 .custom-order-btn {
-    padding: 8px 24px;
-    background: #6a4125;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
+  background-color: #6a4125;       
+  color: white;                   
+  border: none;                  
+  padding: 12px 24px;              
+  font-size: 16px;                
+  border-radius: 6px;            
+  cursor: pointer;              
+  transition: background-color 0.3s ease, transform 0.2s ease; 
 }
 
 .custom-order-btn:hover {
-    background: #e57e24;
+  background-color: #e57e24;      
+  transform: scale(1.05);          }
+
+.custom-order-btn:focus {
+  outline: none;                   
+  box-shadow: 0 0 0 3px 
 }
 
 /* Search Card */
@@ -168,7 +143,7 @@ body {
 .category-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px; /* Slightly more breathing room */
     margin-bottom: 32px;
 }
 
@@ -176,17 +151,24 @@ body {
     padding: 12px 24px;
     border: none;
     border-radius: 8px;
-    background: #f5e0c2;
-    color: #6a4125;
+    background: #d2b48c; /* Light brown background */
+    color: #6a4125;       /* Brown text */
     font-weight: 500;
+    font-size: 16px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s;
+    min-width: 160px;
+    text-align: center;
+    font-weight: 500;
 }
 
-.category-btn:hover, .category-btn.active {
-    background: #e57e24;
+/* Hover and active states */
+.category-btn:hover,
+.category-btn.active {
+    background: #e57e24; /* Orange for active/hover */
     color: white;
 }
+
 
 /* Menu Grid */
 .menu-grid {
@@ -1127,6 +1109,4 @@ footer {
     background-color: #e67e22;
     color: white;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
