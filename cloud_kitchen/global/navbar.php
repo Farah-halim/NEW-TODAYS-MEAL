@@ -45,7 +45,7 @@ if (isset($_SESSION['user_id'])) {
 <div class="container">
     <header class="header">
         <div class="logo">
-            <h1 class="heading">𝓒𝓵𝓸𝓾𝓭 𝓚𝓲𝓽𝓬𝓱𝓮𝓷</h1>
+            <h1 class="heading"> 𝓒𝓵𝓸𝓾𝓭 𝓚𝓲𝓽𝓬𝓱𝓮𝓷 </h1>
         </div>
         <button class="mobile-menu-button">
             <img src="global/images/dropdown-menu.png" alt="menu" width="19" height="19" style="margin-right: 5px; vertical-align: middle;">
@@ -65,7 +65,7 @@ if (isset($_SESSION['user_id'])) {
                 <span class="nav-text">Orders</span>
             </a>
             <a href="./catering.php" class="nav-item">   
-                <span class="nav-icon"><img width="20" height="20" src="https://img.icons8.com/?size=100&id=24555&format=png&color=ffffff" alt="purchase-order"/></span>
+                <span class="nav-icon"><img width="20" height="20" src="https://img.icons8.com/?size=100&id=i2Os176poVX1&format=png&color=FFFFFF" alt="purchase-order"/></span>
                 <span class="nav-text">Catering</span>
             </a>
             <a href="./meal_management.php" class="nav-item">

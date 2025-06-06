@@ -1,7 +1,7 @@
 :root {
     --primary: #8B4513;
     --secondary: #CD853F;
-    --bg: #FDF5E6;
+    --bg: #fff7e5;
     --white: #ffffff;
     --text-light: #f5e0c2;
   }
@@ -9,7 +9,7 @@
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #f7e6cc;;
+    background-color: #fff7e5;;
   }
   
   .white-container {
@@ -52,7 +52,7 @@
   .status-select {
     flex: 1 1 150px; /* Allow flexibility */
     padding: 8px 32px 8px 12px;
-    background-color: white;
+    background-color: #fff7e5;
     font-size: 14px;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
@@ -64,7 +64,7 @@
   .export-btn {
     height: 40px;
     padding: 0 16px;
-    background-color: #FEF3C7;
+    background-color: #f5e0c2;
     color: #92400E;
     border: none;
     border-radius: 6px;
@@ -78,7 +78,7 @@
   }
   
   .export-btn:hover {
-    background-color: #FDE68A;
+    background-color: #fff7e5;
   }
   
   table {
@@ -123,7 +123,6 @@
     background: #E74C3C; /* Red for Out of Stock */
   }
      
-        /* أنماط الحالة */
         .status-display {
           display: flex;
           align-items: center;

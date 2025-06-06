@@ -30,9 +30,7 @@ body {
 }
 
 .filter-button.all { background-color: #6a4125; color: white; }
-.filter-button.pending { background-color: #ffc107c0; color: #333; }
-.filter-button.accepted { background-color: #38973b; color: white; }
-.filter-button.rejected { background-color: #b3382f; color: white; }
+
 
 .filter-button:hover {
   opacity: 0.7;
