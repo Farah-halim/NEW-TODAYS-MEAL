@@ -220,6 +220,7 @@ body {
   border-radius: 10px;
   font-weight: 600;
   transition: background-color 0.3s;
+  margin-bottom: 10px;
 }
 .custom-order-btn:hover {
   background: #e57e24; 

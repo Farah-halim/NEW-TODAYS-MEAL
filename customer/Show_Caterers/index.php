@@ -86,18 +86,28 @@ try {
 
     <div class="container">
         <div class="nav-section" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <a href="\NEW-TODAYS-MEAL\customer\Home\index.php" class="nav-link">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="m12 19-7-7 7-7"/>
-                </svg>
-                <span>Back to home</span>
-            </a>
-            <a href="?reset=1" class="nav-link" style="margin-left: auto; background-color: #f5e0c2; padding: 8px 12px; border-radius: 6px; transition: background-color 0.3s;">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                <span>Reset Filters</span>
-            </a>
+            <a href="\NEW-TODAYS-MEAL\customer\Home\index.php" 
+   style="display: inline-flex; align-items: center; text-decoration: none; font-size: 0.85rem; color: #333;">
+    
+    <svg viewBox="0 0 24 24" fill="none" stroke="saddlebrown" stroke-width="2" 
+         style="width: 30px; height: 30px; margin-right: 4px;">
+        <path d="m12 19-7-7 7-7"/>
+    </svg>
+
+    <span style="font-size: 1.1rem; color: #6a4125;">Back to Home</span>
+</a>
+
+            <a href="?reset=1" 
+   style="display: inline-flex; align-items: center; background-color: #f5e0c2; padding: 8px 12px; border-radius: 6px; transition: background-color 0.3s; text-decoration: none; font-size: 1.1rem; color: #6a4125; margin-left: auto;">
+    
+    <svg viewBox="0 0 24 24" fill="none" stroke="saddlebrown" stroke-width="2" 
+         style="width: 30px; height: 30px; margin-right: 6px;">
+        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+    </svg>
+
+    <span style="font-size: 1.1rem; color: #6a4125;">Reset Filters</span>
+</a>
+
         </div>
         <h1 class="page-title">Cloud Kitchens</h1>
 

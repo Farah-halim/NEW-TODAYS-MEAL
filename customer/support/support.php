@@ -1,3 +1,8 @@
+<?php
+require_once __DIR__ . '/../../DB_connection.php';
+$user_id = $_SESSION['user_id'] ?? null; // Assuming you store user_id in session
+
+?>
 <!DOCTYPE html>
 <html>
   <head>
@@ -100,6 +105,5 @@
     </div>
     <script src="script.js"></script>  
               <?php include '..\global\footer\footer.php'; ?>
-
   </body>
 </html>

@@ -148,6 +148,7 @@ body {
 }
 
 .category-btn {
+  margin-bottom: 7px;
     padding: 12px 24px;
     border: none;
     border-radius: 8px;
@@ -210,6 +211,7 @@ body {
 
 .menu-content {
     padding: 16px;
+    margin-bottom: 10px;
 }
 
 .item-name {

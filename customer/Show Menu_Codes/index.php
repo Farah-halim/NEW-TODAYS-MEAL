@@ -171,6 +171,7 @@ try {
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        
         .notification-popup {
             position: fixed;
             top: 20px;
@@ -215,13 +216,21 @@ try {
 
     <div class="container">
             <div class="nav-section">
-                <a href="\NEW-TODAYS-MEAL\customer\Show_Caterers\index.php" class="nav-link">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="m12 19-7-7 7-7"/>
-                    </svg>
-                    <span>Back to Cloud Kitchen</span>
-                </a>
-            </div>
+    <a href="\NEW-TODAYS-MEAL\customer\Show_Caterers\index.php" class="nav-link">
+        <a href="\NEW-TODAYS-MEAL\customer\Show_Caterers\index.php" 
+   style="display: inline-flex; align-items: center; text-decoration: none; font-size: 1.1rem; color: #6a4125;">
+    
+    <svg viewBox="0 0 24 24" fill="none" stroke="saddlebrown" stroke-width="2" 
+         style="width: 30px; height: 30px; margin-right: 6px;">
+        <path d="m12 19-7-7 7-7"/>
+    </svg>
+
+    <span style="font-size: 1.1rem; color: #6a4125;">Back to Cloud Kitchen</span>
+</a>
+
+    </a>
+</div>
+
             <h1 class="page-title" id="restaurantName"><?php echo htmlspecialchars($kitchen['business_name'] ?? 'Cloud Kitchen'); ?></h1>
         <?php if ($kitchen['customized_orders']): ?>
         <div class="custom-order-banner">
