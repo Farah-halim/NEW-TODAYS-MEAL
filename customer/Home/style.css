@@ -1,11 +1,11 @@
 :root {
-  --primary-color: #6a4125;        /* Dark Chocolate */
-  --secondary-color: #e57e24;      /* Terracotta Orange */
-  --accent-color: #dab98b;         /* Golden Brown */
-  --dark-text: #6a4125;            /* Dark Chocolate */
-  --light-text: #fff7e5;           /* Cream */
-  --background-light: #f5e0c2;     /* Warm Beige */
-  --background-cream: #fff7e5;     /* Cream */
+  --primary-color: #6a4125;
+  --secondary-color: #e57e24;
+  --accent-color: #dab98b;
+  --dark-text: #6a4125;
+  --light-text: #fff7e5;
+  --background-light: #f5e0c2;
+  --background-cream: #fff7e5;
   --shadow-light: rgba(106, 65, 37, 0.1);
   --transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -25,7 +25,7 @@ body {
   margin: 0 auto;
   background-color: var(--background-cream);
   overflow-x: hidden;
-  padding: 1rem;
+  padding: 1rem 1rem 0.5rem; /* reduced bottom padding */
 }
 
 /* Hero Section */
@@ -33,13 +33,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: var(--background-cream); /* #fff7e5 */
+  background-color: var(--background-cream);
   border-radius: 0;
   box-shadow: none;
-  padding: 3rem 2rem 2rem; 
+  padding: 3rem 2rem 2rem;
   text-align: center;
 }
-
 
 .hero-content {
   max-width: 600px;
@@ -204,38 +203,20 @@ h1 {
 .search-section,
 .featured-categories {
   background-color: var(--background-light);
-  box-shadow: none; 
-  border-radius: 12px 12px 0 0; 
-  margin-bottom: 0; 
+  box-shadow: none;
+  border-radius: 12px 12px 0 0;
+  margin-bottom: 0;
 }
 
 .featured-categories {
-  border-radius: 0 0 12px 12px; 
-  margin-top: 0; 
-  padding-top: 1rem; 
+  border-radius: 0 0 12px 12px;
+  margin-top: 0;
+  padding-top: 1rem;
+  padding-bottom: 1rem; /* reduced bottom padding */
 }
 
 .category-button {
   margin: 0 0.5rem;
-}
-
-.tags-container {
-  margin-top: 1rem;
-  padding: 0 0.5rem;
-}
-
-.search-bar {
-  margin-bottom: 0;
-}
-.featured-categories {
-  background-color: var(--background-light);
-  padding: 2.5rem 1.5rem;
-  margin-bottom: 40px;
-  overflow-x: auto;
-  white-space: nowrap;
-  text-align: center;
-  border-radius: 12px;
-  box-shadow: 0 6px 14px var(--shadow-light);
 }
 
 h2 {
@@ -305,7 +286,7 @@ h2 {
 .meal-plans {
   margin-top: 30px;
   background-color: var(--background-light);
-  padding: 4rem 2rem;
+  padding: 4rem 2rem 2rem; /* reduced bottom padding */
   text-align: center;
   border-radius: 12px;
   box-shadow: 0 8px 18px var(--shadow-light);
@@ -403,7 +384,6 @@ h2 {
   filter: brightness(0.8);
 }
 
-/* Plan Card Buttons */
 .plan-card button {
   width: 100%;
   padding: 0.9rem 0;
@@ -434,12 +414,12 @@ h2 {
 
 .plan-card.popular button:hover {
   background-color: var(--background-light);
-  border-color: #a36320; /* Slightly darker Golden Brown */
+  border-color: #a36320;
   color: #a36320;
   box-shadow: none;
 }
 
-/* Special Event Catering Section */
+/* Catering Section */
 .catering {
   display: flex;
   flex-direction: column;
@@ -447,6 +427,7 @@ h2 {
   border-radius: 16px;
   overflow: hidden;
   margin-top: 3rem;
+  margin-bottom: 1rem; /* reduced bottom margin */
   box-shadow: 0 8px 18px var(--shadow-light);
 }
 
@@ -493,7 +474,6 @@ h2 {
   font-size: 1.125rem;
 }
 
-/* Catering Button */
 .catering button {
   background-color: var(--secondary-color);
   color: var(--light-text);
@@ -513,7 +493,6 @@ h2 {
   cursor: pointer;
 }
 
-/* Responsive tweaks */
 @media (min-width: 768px) {
   .hero {
     flex-direction: row;
@@ -549,31 +528,4 @@ h2 {
   .catering-features {
     grid-template-columns: repeat(4, 1fr);
   }
-}
-
-.search-section,
-.featured-categories {
-  background-color: var(--background-light);
-  box-shadow: none; 
-  border-radius: 12px 12px 0 0; 
-  margin-bottom: 0; 
-}
-
-.featured-categories {
-  border-radius: 0 0 12px 12px; 
-  margin-top: 0; 
-  padding-top: 1rem; 
-}
-
-.category-button {
-  margin: 0 0.5rem;
-}
-
-.tags-container {
-  margin-top: 1rem;
-  padding: 0 0.5rem;
-}
-
-.search-bar {
-  margin-bottom: 0;
 }
