@@ -248,11 +248,10 @@ if ($stmt = $conn->prepare($cartsQuery)) {
     <input type="hidden" name="customer_id" value="<?= htmlspecialchars($user_id, ENT_QUOTES, 'UTF-8') ?>">
     <input type="hidden" name="cloud_kitchen_id" value="<?= htmlspecialchars($cartData['cloud_kitchen_id'], ENT_QUOTES, 'UTF-8') ?>">
 
-    <button type="submit" 
-            class="checkout-btn btn btn-primary <?= $cartData['hasOutOfStockItems'] ? 'disabled' : '' ?>" 
-            <?= $cartData['hasOutOfStockItems'] ? 'disabled' : '' ?>>
-        Checkout Now
-    </button>
+    <button class="checkout-btn btn btn-primary <?= $cartData['hasOutOfStockItems'] ? 'disabled' : '' ?>" 
+                                data-cart-id="<?= $cartData['cart_id'] ?>">
+                            Checkout Now
+                        </button>
 
     <a href="/NEW-TODAYS-MEAL/customer/Checkout_Codes/Order_Type/index.php?cart_id=<?= urlencode($cartData['cart_id']) ?>" 
        class="btn btn-outline">
