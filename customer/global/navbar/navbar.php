@@ -30,6 +30,10 @@ $user_id = $_SESSION['user_id'];
                 <span class="nav-icon meals"></span>
                 <span class="nav-text">Track my Order</span>
             </a>
+              <a href="\NEW-TODAYS-MEAL\customer\Show_Caterers\index.php" class="nav-item">
+                <span class="nav-icon order"></span>
+                <span class="nav-text">Start Ordering</span>
+            </a>
             <a href="\NEW-TODAYS-MEAL\customer\support\support.php" class="nav-item">
                 <span class="nav-icon support"></span>
                 <span class="nav-text">Support</span>
@@ -514,6 +518,9 @@ body {
 
 .nav-icon.cart {
   background-image: url(https://img.icons8.com/?size=100&id=LhRbsuC35iCh&format=png&color=FFFFFF);
+}
+.nav-icon.order {
+  background-image: url(https://img.icons8.com/?size=100&id=mw0nuWDpzoyZ&format=png&color=FFFFFF);
 }
 
 .nav-icon.meals {
