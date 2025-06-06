@@ -24,20 +24,20 @@
     .page-wrapper {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      min-height:70vh
     }
 
     .main-content {
       flex: 1;
       padding: 20px;
     }
-
     .footer {
       background-color: #6a4125;
       color: #f5f5f5;
       padding: 40px 20px;
-      margin-top: 250px;
+      margin-top: 0; /* Changed from 250px to 0 */
     }
+
 
     .footer-container {
       max-width: 1200px;
