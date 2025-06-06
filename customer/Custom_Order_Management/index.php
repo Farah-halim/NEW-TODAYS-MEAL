@@ -11,10 +11,11 @@ $customer_id = $_SESSION['user_id'];
 
 $orders = [];
 if ($conn) {
+    // Get ALL customized orders (regardless of payment status)
     $sql = "SELECT co.*, o.order_date, o.delivery_date, o.delivery_zone, 
+                   o.order_status, 
                    cko.business_name AS cloud_kitchen_name,
-                   u.u_name AS customer_name,
-                   o.order_status AS order_status
+                   u.u_name AS customer_name
             FROM customized_order co
             JOIN orders o ON co.order_id = o.order_id
             JOIN cloud_kitchen_owner cko ON co.kitchen_id = cko.user_id
@@ -23,19 +24,45 @@ if ($conn) {
             ORDER BY o.order_date DESC";
     
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        die("Error preparing statement: " . $conn->error);
+    }
+    
     $stmt->bind_param("i", $customer_id);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        die("Error executing statement: " . $stmt->error);
+    }
+    
     $result = $stmt->get_result();
     
     while ($row = $result->fetch_assoc()) {
-        $payment_check_sql = "SELECT payment_id FROM payment_details WHERE order_id = ?";
-        $payment_stmt = $conn->prepare($payment_check_sql);
+        // Check if order exists in payment table
+        $payment_sql = "SELECT payment_status FROM payment_details 
+                       WHERE order_id = ?";
+        $payment_stmt = $conn->prepare($payment_sql);
+        if (!$payment_stmt) {
+            die("Error preparing payment statement: " . $conn->error);
+        }
+        
         $payment_stmt->bind_param("i", $row['order_id']);
-        $payment_stmt->execute();
+        if (!$payment_stmt->execute()) {
+            die("Error executing payment statement: " . $payment_stmt->error);
+        }
+        
         $payment_result = $payment_stmt->get_result();
-        $payment_exists = $payment_result->num_rows > 0;
+        
+        if ($payment_result->num_rows > 0) {
+            $payment_data = $payment_result->fetch_assoc();
+            $row['payment_exists'] = true;
+            $row['payment_status'] = $payment_data['payment_status'];
+        } else {
+            $row['payment_exists'] = false;
+            $row['payment_status'] = null;
+            $row['order_status'] = null; // Hide order_status if no payment
+        }
         $payment_stmt->close();
         
+        // Status mapping for customized orders
         if ($row['customer_approval'] == 'approved') {
             $row['status'] = 'price_accepted';
         } elseif ($row['customer_approval'] == 'rejected') {
@@ -48,7 +75,6 @@ if ($conn) {
             $row['status'] = 'pending';
         }
         
-        $row['payment_exists'] = $payment_exists;
         $orders[] = $row;
     }
     
@@ -62,29 +88,87 @@ if ($conn) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom Catering Orders</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .order-header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .order-status-badge {
+               padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: capitalize;
+        }
+
+        .order-status-badge[data-status="pending"] {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffeeba;
+        }
+
+        .order-status-badge[data-status="preparing"] {
+            background-color: #cce5ff;
+            color: #004085;
+            border-color: #b8daff;
+        }
+
+        .order-status-badge[data-status="ready_for_pickup"] {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .order-status-badge[data-status="in_transit"] {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border-color: #d6d8db;
+        }
+
+        .order-status-badge[data-status="delivered"] {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+
+        .order-status-badge[data-status="cancelled"] {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        
+        .order-status-badge[data-status="payment_processing"] {
+            background-color: #e2d4f0;
+            color: #4a2a7a;
+            border-color: #d0bae4;
+        }
+    </style>
 </head>
 <body>
-           <?php include '..\global\navbar\navbar.php'; ?>
+    <?php include '..\global\navbar\navbar.php'; ?>
 
     <div class="container">
-<div class="search-filter-section">
-    <div class="search-bar">
-        <div class="search-input-wrapper">
-            <img src="https://img.icons8.com/?size=100&id=3159&format=png&color=000000" alt="Search" class="search-icon">
-            <input type="text" id="searchInput" placeholder="Search your orders..." class="search-input">
-        </div>
-    </div>
+        <div class="search-filter-section">
+            <div class="search-bar">
+                <div class="search-input-wrapper">
+                    <img src="https://img.icons8.com/?size=100&id=3159&format=png&color=000000" alt="Search" class="search-icon">
+                    <input type="text" id="searchInput" placeholder="Search your orders..." class="search-input">
+                </div>
+            </div>
 
-    <div class="filter-controls">
-        <div class="filter-buttons">
-            <button class="filter-btn active" data-filter="all">All Orders</button>
-            <button class="filter-btn" data-filter="pending">Pending</button>
-            <button class="filter-btn" data-filter="approved">Approved</button>
-            <button class="filter-btn" data-filter="rejected">Rejected</button>
-            <button class="filter-btn" data-filter="price_accepted">Price Accepted</button>
+            <div class="filter-controls">
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">All Orders</button>
+                    <button class="filter-btn" data-filter="pending">Pending</button>
+                    <button class="filter-btn" data-filter="approved">Approved</button>
+                    <button class="filter-btn" data-filter="rejected">Rejected</button>
+                    <button class="filter-btn" data-filter="price_accepted">Price Accepted</button>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
         <div class="orders-list" id="ordersList">
             <?php foreach ($orders as $index => $order): 
                 $order_number = str_pad($order['order_id'], 3, '0', STR_PAD_LEFT);
@@ -115,6 +199,12 @@ if ($conn) {
                 
                 $show_price_quote = ($order['status'] == 'approved' && $order['chosen_amount'] !== null);
                 $show_invoice = ($order['status'] == 'price_accepted' && $order['chosen_amount'] !== null && !$order['payment_exists']);
+                
+                // Determine the order status to display
+                $display_order_status = $order['order_status'];
+                if ($order['payment_exists'] && empty($display_order_status)) {
+                    $display_order_status = 'payment_processing';
+                }
             ?>
             <div class="order-card" data-status="<?= htmlspecialchars($order['status']) ?>" 
                  data-search="ORD-<?= $order_number ?> <?= htmlspecialchars($order['cloud_kitchen_name']) ?> <?= htmlspecialchars($order['ord_description']) ?>">
@@ -127,10 +217,15 @@ if ($conn) {
                         <p class="kitchen-name"><strong>Cloud Kitchen:</strong> <?= htmlspecialchars($order['cloud_kitchen_name']) ?></p>
                         <p class="status-message"><?= $status_message ?></p>
                     </div>
-                    <button class="toggle-details-btn" onclick="toggleOrderDetails(<?= $index + 1 ?>)">
-                        <span class="toggle-text" id="toggleText<?= $index + 1 ?>">Hide Details</span>
-                        <img src="https://img.icons8.com/?size=100&id=39804&format=png&color=957B6A" alt="Toggle" class="toggle-icon" id="toggleIcon<?= $index + 1 ?>">
-                    </button>
+                    <div class="order-header-right">
+                        <span class="order-status-badge" data-status="<?= htmlspecialchars($display_order_status) ?>">
+                            <?= ucfirst(str_replace('_', ' ', $display_order_status)) ?>
+                        </span>
+                        <button class="toggle-details-btn" onclick="toggleOrderDetails(<?= $index + 1 ?>)">
+                            <span class="toggle-text" id="toggleText<?= $index + 1 ?>">Hide Details</span>
+                            <img src="https://img.icons8.com/?size=100&id=39804&format=png&color=957B6A" alt="Toggle" class="toggle-icon" id="toggleIcon<?= $index + 1 ?>">
+                        </button>
+                    </div>
                 </div>
 
                 <div class="order-details" id="orderDetails<?= $index + 1 ?>">

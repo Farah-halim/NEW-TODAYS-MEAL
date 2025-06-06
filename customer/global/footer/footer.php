@@ -24,6 +24,7 @@
       background-color: #6a4125;
       color: #f5f5f5;
       padding: 40px 20px;
+      margin-top: 250px;
     }
 
     .footer-container {

@@ -26,9 +26,9 @@ $user_id = $_SESSION['user_id'];
                 <span class="nav-icon cart"></span>
                 <span class="nav-text">Cart</span>
             </a>
-            <a href="\NEW-TODAYS-MEAL\customer\Show_Caterers\index.php" class="nav-item">
+            <a href="\NEW-TODAYS-MEAL\customer\Order_tracking\index.php" class="nav-item">
                 <span class="nav-icon meals"></span>
-                <span class="nav-text">Order</span>
+                <span class="nav-text">Track my Order</span>
             </a>
             <a href="\NEW-TODAYS-MEAL\customer\support\support.php" class="nav-item">
                 <span class="nav-icon support"></span>
