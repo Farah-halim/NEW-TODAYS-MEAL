@@ -1,0 +1,138 @@
+ALTER TABLE external_user
+ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN last_login TIMESTAMP NULL;
+
+CREATE TABLE zones (
+    zone_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Insert zones if they don't exist
+INSERT IGNORE INTO zones (zone_id, name) VALUES 
+(1, 'New Cairo'),
+(2, '6th of October');
+
+CREATE TABLE admin_actions (
+    action_id INT PRIMARY KEY,
+    admin_id INT REFERENCES users(user_id),
+    action_type TEXT, -- e.g., 'CREATE_ZONE'
+    action_target TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE customized_order MODIFY preferred_completion_date DATETIME NOT NULL;
+
+ALTER TABLE customized_order
+ADD COLUMN customer_approval ENUM('approved', 'rejected', 'pending') DEFAULT 'pending'
+
+ALTER TABLE external_user
+ADD COLUMN zone_id INT NOT NULL;
+
+ALTER TABLE orders
+ADD customer_selected_date DATE NULL;
+
+-- Foreign Key 
+ALTER TABLE external_user
+ADD CONSTRAINT fk_external_user_zone FOREIGN KEY (zone_id) REFERENCES zones(zone_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+
+CREATE TABLE IF NOT EXISTS `kitchen_documents` (
+  `doc_id` int(11) NOT NULL AUTO_INCREMENT,
+  `kitchen_id` int(11) NOT NULL,
+  `document_type` enum('national_id','business_license','health_certificate','tax_certificate','kitchen_photos','other') NOT NULL,
+  `document_name` varchar(255)NOT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `file_size` int(11) DEFAULT NULL,
+  `file_type` varchar(100) DEFAULT NULL,
+  `upload_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `status` enum('pending','approved','rejected') DEFAULT 'pending',
+  `admin_notes` text DEFAULT NULL,
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`doc_id`),
+  KEY `kitchen_id` (`kitchen_id`),
+  KEY `reviewed_by` (`reviewed_by`),
+  CONSTRAINT `kitchen_documents_ibfk_1` FOREIGN KEY (`kitchen_id`) REFERENCES `cloud_kitchen_owner` (`user_id`) ON DELETE CASCADE,
+  CONSTRAINT `kitchen_documents_ibfk_2` FOREIGN KEY (`reviewed_by`) REFERENCES `admin` (`user_id`) ON DELETE SET NULL
+
+
+ALTER TABLE meals ADD COLUMN visible BOOLEAN DEFAULT TRUE;
+
+CREATE TABLE meal_dietary_tag (
+    meal_id INT NOT NULL,
+    tag_id INT NOT NULL,
+    PRIMARY KEY (meal_id, tag_id),
+    FOREIGN KEY (meal_id) REFERENCES meals(meal_id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES dietary_tags(tag_id) ON DELETE CASCADE
+);
+
+ALTER TABLE order_packages 
+ADD package_status ENUM('pending', 'preparing', 'ready_for_pickup', 'in_transit', 'delivered', 'cancelled') 
+DEFAULT 'pending';
+
+
+ALTER TABLE order_packages
+ADD payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending';
+
+
+ALTER TABLE payment_details
+ADD COLUMN payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending';
+
+ALTER TABLE orders 
+DROP COLUMN kitchen_order_status,
+DROP COLUMN order_status;
+
+ALTER TABLE orders 
+ADD COLUMN order_status ENUM(
+    'pending', 
+    'preparing', 
+    'ready_for_pickup', 
+    'in_transit', 
+    'delivered', 
+    'cancelled'
+) DEFAULT 'pending';
+
+
+ALTER TABLE external_user
+ADD FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE;
+
+ALTER TABLE cloud_kitchen_owner
+ADD FOREIGN KEY (user_id) REFERENCES external_user(user_id) ON DELETE CASCADE;
+
+ALTER TABLE meals
+ADD FOREIGN KEY (cloud_kitchen_id) REFERENCES cloud_kitchen_owner(user_id) ON DELETE CASCADE;
+
+--For Suspension
+ALTER TABLE `cloud_kitchen_owner` ADD COLUMN `suspension_reason` TEXT NULL DEFAULT NULL;
+ALTER TABLE `cloud_kitchen_owner` ADD COLUMN `suspended_by` INT(11) NULL DEFAULT NULL;
+ALTER TABLE `cloud_kitchen_owner` ADD COLUMN `suspension_date` TIMESTAMP NULL DEFAULT NULL;
+
+-- Add foreign key for suspended_by
+ALTER TABLE `cloud_kitchen_owner` ADD CONSTRAINT `fk_suspended_by` 
+FOREIGN KEY (`suspended_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
+
+ALTER TABLE cloud_kitchen_owner
+DROP COLUMN address;
+
+CREATE TABLE cart (
+    cart_id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    cloud_kitchen_id INT NOT NULL,  
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customer(user_id),
+    FOREIGN KEY (cloud_kitchen_id) REFERENCES cloud_kitchen_owner(user_id)
+);
+
+CREATE TABLE cart_items (
+    cart_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    cart_id INT NOT NULL,
+    meal_id INT NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (cart_id) REFERENCES cart(cart_id),
+    FOREIGN KEY (meal_id) REFERENCES meals(meal_id)
+);
+
+Alter table cloud_kitchen_owner
+Add constraint foreign key(speciality_id) references category(cat_id) on delete cascade
+
