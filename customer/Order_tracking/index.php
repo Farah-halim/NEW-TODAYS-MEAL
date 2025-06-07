@@ -497,15 +497,15 @@ unset($order);
                 </div>
             </div>
             <div class="order-actions <?php echo $order['status_class'] == 'delivered' ? 'delivered-actions' : ''; ?>">
-                <a href="?view_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" style="text-decoration: none;" class="btn-secondary <?php echo $order['status_class'] == 'delivered' ? 'small' : ''; ?>">View Details</a>
-                <?php if ($order['status_class'] == 'delivered'): ?>
-                    <?php if ($order['review']): ?>
-                        <div class="rated-badge"><span>Rated: <?php echo $order['review']['stars']; ?>&#9733;</span></div>
-                    <?php else: ?>
-                        <a href="?rate_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-primary">Rate Order</a>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </div>
+    <a href="?view_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" style="text-decoration: none;" class="btn-secondary <?php echo $order['status_class'] == 'delivered' ? 'small' : ''; ?>">View Details</a>
+    <?php if ($order['status_class'] == 'delivered'): ?>
+        <?php if (isset($order['review']) && $order['review']['stars'] > 0): ?>
+            <div class="rated-badge" style="border: none;"><span style="text-decoration: none;">Rated: <?php echo $order['review']['stars']; ?>&#9733;</span></div>
+        <?php else: ?>
+            <a href="?rate_order=<?php echo $order['order_id']; ?><?php if($filter !== 'all') echo '&filter='.$filter; ?>" class="btn-primary">Rate Order</a>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
         </div>
         <?php endforeach; ?>
     </div>
