@@ -411,11 +411,11 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
                     <a href="admin_cloud_kitchen_dashboard.php" class="btn btn-lg" style="background-color: #3d6f5d; color: white;">
                         <i class="fas fa-store me-2"></i>Manage Cloud Kitchens
                     </a>
+                    <a href="customer_dashboard.php" class="btn btn-lg" style="background-color: #3d6f5d; color: white;">
+                        <i class="fas fa-users me-2"></i>Manage Customers
+                    </a>
                     <a href="manage_delivery.php" class="btn btn-lg" style="background-color: #3d6f5d; color: white;">
                         <i class="fas fa-motorcycle me-2"></i>Delivery Management
-                    </a>
-                    <a href="../../manage_complaints.php" class="btn btn-lg" style="background-color: #3d6f5d; color: white;">
-                        <i class="fas fa-headset me-2"></i>Support Tickets
                     </a>
                     <a href="manage_categories.php" class="btn btn-lg" style="background-color: #3d6f5d; color: white;">
                         <i class="fas fa-list me-2"></i>Manage Catalog
