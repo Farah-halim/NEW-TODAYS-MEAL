@@ -229,3 +229,15 @@ BEGIN
     SET NEW.total_payment = NEW.total_ord_price + NEW.delivery_fees;
 END//
 DELIMITER ;
+
+-- weak relationship constraints
+ALTER TABLE sub_category 
+ADD CONSTRAINT fk_subcategory_cascade 
+FOREIGN KEY (parent_cat_id) REFERENCES category(cat_id) 
+ON DELETE CASCADE;
+
+-- ensuring subcategory names are unique within each category
+ALTER TABLE sub_category 
+ADD CONSTRAINT unique_subcat_per_category 
+UNIQUE(parent_cat_id, subcat_name);
+
