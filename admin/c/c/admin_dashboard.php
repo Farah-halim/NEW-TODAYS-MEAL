@@ -190,6 +190,10 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
                 Cloud Kitchen Management Dashboard
             </span>
             <div>
+                <a href="financial_accounts.php" class="btn btn-outline-light me-2" title="Financial Accounts">
+                    <i class="fas fa-coins"></i>
+                    <span class="d-none d-md-inline ms-1">Finances</span>
+                </a>
                 <button class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#notificationsModal">
                     <i class="fas fa-bell"></i>
                     <span class="badge bg-danger"><?php echo $total_flagged_issues; ?></span>
@@ -302,32 +306,45 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
 
         <!-- Metrics Row -->
         <div class="row mb-4">
-            <div class="col-md-3">
+            <div class="col">
                 <div class="metrics-container text-center">
                     <i class="fas fa-utensils fa-2x mb-2" style="color: #3d6f5d;"></i>
                     <h3><?php echo $active_kitchens; ?></h3>
-                    <p>Active Cloud Kitchens</p>
+                    <p>Active <br> Cloud Kitchens</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col">
                 <div class="metrics-container text-center">
                     <i class="fas fa-users fa-2x mb-2" style="color: #e57e24;"></i>
                     <h3><?php echo $customers_count; ?></h3>
                     <p>Total <br> Customers</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col">
                 <div class="metrics-container text-center">
                     <i class="fas fa-motorcycle fa-2x mb-2" style="color: #6a4125;"></i>
                     <h3><?php echo $delivery_count; ?></h3>
                     <p>Delivery <br>Agents</p>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col">
                 <div class="metrics-container text-center">
                     <i class="fas fa-exclamation-triangle fa-2x mb-2" style="color: #ff6b6b;"></i>
                     <h3><?php echo $total_flagged_issues; ?></h3>
                     <p>Flagged<br> Issues</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="metrics-container text-center">
+                    <i class="fas fa-chart-bar fa-2x mb-2" style="color: #2ecc71;"></i>
+                    <h3><?php 
+                    // Quick revenue calculation
+                    $revenue_query = "SELECT SUM(total_payment) as total_revenue FROM payment_details WHERE MONTH(p_date_time) = MONTH(CURDATE())";
+                    $revenue_result = $conn->query($revenue_query);
+                    $monthly_revenue = $revenue_result->fetch_assoc()['total_revenue'] ?? 0;
+                    echo '$' . number_format($monthly_revenue, 0); 
+                    ?></h3>
+                    <p>Monthly<br> Revenue</p>
                 </div>
             </div>
         </div>
