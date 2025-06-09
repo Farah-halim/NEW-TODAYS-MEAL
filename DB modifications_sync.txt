@@ -1,3 +1,6 @@
+ALTER TABLE orders
+DROP COLUMN delivery_zone;
+
 ALTER TABLE external_user
 ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN last_login TIMESTAMP NULL;
@@ -136,3 +139,93 @@ CREATE TABLE cart_items (
 Alter table cloud_kitchen_owner
 Add constraint foreign key(speciality_id) references category(cat_id) on delete cascade
 
+
+-- Financial Settlements Table Migration
+-- This table tracks settlement statuses for accounts receivable and payable
+
+CREATE TABLE `financial_settlements` (
+  `settlement_id` int(11) NOT NULL AUTO_INCREMENT,
+  `order_id` int(11) NOT NULL,
+  `settlement_type` enum('delivery_receivable','delivery_payable','kitchen_payable') NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `settlement_status` enum('pending','settled','partially_settled') DEFAULT 'pending',
+  `settlement_date` timestamp NULL DEFAULT NULL,
+  `settlement_reference` varchar(100) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`settlement_id`),
+  KEY `order_id` (`order_id`),
+  KEY `settlement_type` (`settlement_type`),
+  KEY `settlement_status` (`settlement_status`),
+  FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Add indexes for better performance
+CREATE INDEX `idx_settlement_type_status` ON `financial_settlements` (`settlement_type`, `settlement_status`);
+CREATE INDEX `idx_settlement_date` ON `financial_settlements` (`settlement_date`);
+
+-- Insert initial settlement records for existing orders
+INSERT INTO `financial_settlements` (`order_id`, `settlement_type`, `amount`, `settlement_status`, `created_at`)
+SELECT 
+    o.order_id,
+    CASE 
+        WHEN pd.p_method = 'cash' THEN 'delivery_receivable'
+        WHEN pd.p_method = 'visa' THEN 'delivery_payable'
+    END as settlement_type,
+    CASE 
+        WHEN pd.p_method = 'cash' THEN (pd.total_ord_price + (pd.delivery_fees * 0.1))  
+-- Food amount + 10% of delivery fees
+        WHEN pd.p_method = 'visa' THEN pd.delivery_fees  -- Delivery fees owed for online orders
+    END as amount,
+    'pending' as settlement_status,
+    o.order_date as created_at
+FROM orders o
+JOIN payment_details pd ON o.order_id = pd.order_id
+WHERE pd.p_method IN ('cash', 'visa');
+
+-- Insert kitchen payable records for all orders (85% of order amount)
+INSERT INTO `financial_settlements` (`order_id`, `settlement_type`, `amount`, `settlement_status`, `created_at`)
+SELECT 
+    o.order_id,
+    'kitchen_payable' as settlement_type,
+    (pd.total_ord_price * 0.85) as amount,  -- Kitchen gets 85%, platform keeps 15% commission
+    'pending' as settlement_status,
+    o.order_date as created_at
+FROM orders o
+JOIN payment_details pd ON o.order_id = pd.order_id; 
+
+DROP TABLE payment_details;
+
+CREATE TABLE payment_details (
+    payment_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT,
+    total_ord_price DECIMAL(10,2) NOT NULL,
+    delivery_fees DECIMAL(10,2) NOT NULL,
+    website_revenue DECIMAL(10,2) NOT NULL,
+    total_payment DECIMAL(10,2) NOT NULL,
+    p_date_time DATETIME NOT NULL,
+    p_method ENUM('cash', 'visa') NOT NULL,
+    payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+
+DELIMITER //
+CREATE TRIGGER before_payment_details_insert
+BEFORE INSERT ON payment_details
+FOR EACH ROW
+BEGIN
+    SET NEW.website_revenue = NEW.total_ord_price * 0.15;
+    SET NEW.total_payment = NEW.total_ord_price + NEW.delivery_fees;
+END//
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER before_payment_details_update
+BEFORE UPDATE ON payment_details
+FOR EACH ROW
+BEGIN
+    SET NEW.website_revenue = NEW.total_ord_price * 0.15;
+    SET NEW.total_payment = NEW.total_ord_price + NEW.delivery_fees;
+END//
+DELIMITER ;

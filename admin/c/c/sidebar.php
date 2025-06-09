@@ -63,22 +63,25 @@
                         Delivery Management
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="financial_accounts.php">
+                        <i class="fas fa-coins me-2"></i>
+                        Financial Accounts
+                    </a>
+                </li>
             </ul>
             
             <hr>
             <div class="px-3">
                 <div class="alert alert-info" role="alert">
                     <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Quick Tip</h6>
-                    <p class="small mb-0">Use filters to quickly find specific orders by status, date, or customer.</p>
+                    <p class="small mb-0">Use filters to quickly find specific needs.</p>
                 </div>
 
                 <div class="text-center mt-4">
                     <br>
                     <br>
                     <br>
-                    <br>
-                   
-                    
                     <img src="logo1.png" alt="Logo" style="max-width: 100px; opacity: 0.75;">
                 </div>
             </div>

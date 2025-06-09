@@ -12,7 +12,7 @@ $customer_id = $_SESSION['user_id'];
 $orders = [];
 if ($conn) {
     // Get ALL customized orders (regardless of payment status)
-    $sql = "SELECT co.*, o.order_date, o.delivery_date, o.delivery_zone, 
+    $sql = "SELECT co.*, o.order_date, o.delivery_date, o.delivery_zne, 
                    o.order_status, 
                    cko.business_name AS cloud_kitchen_name,
                    u.u_name AS customer_name
