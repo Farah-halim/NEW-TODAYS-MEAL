@@ -88,14 +88,13 @@ if ($customer_result->num_rows > 0) {
 
 // Filter for order list
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
-$status_conditions = [
-    'all' => "",
+$status_filters = [
     'preparing' => "AND (o.order_status = 'pending' OR o.order_status = 'preparing')",
     'on-the-way' => "AND (o.order_status = 'ready_for_pickup' OR o.order_status = 'in_transit')",
     'delivered' => "AND o.order_status = 'delivered'",
     'cancelled' => "AND o.order_status = 'cancelled'"
 ];
-$status_condition = $status_conditions[$filter] ?? "";
+$status_condition = $status_filters[$filter] ?? "";
 
 // Check if we need to show order details modal
 $show_order_details = isset($_GET['view_order']);

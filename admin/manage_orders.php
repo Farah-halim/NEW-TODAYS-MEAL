@@ -42,11 +42,13 @@ if (!empty($params)) {
     $result = $conn->query($query);
 }
 
-// Count orders by status
+// Get order counts for different statuses  
 $pending_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status='pending'")->fetch_assoc()['count'];
-$in_progress_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status='in_progress'")->fetch_assoc()['count'];
+$preparing_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status='preparing'")->fetch_assoc()['count'];
+$ready_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status='ready_for_pickup'")->fetch_assoc()['count'];
+$in_transit_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status='in_transit'")->fetch_assoc()['count'];
 $delivered_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status='delivered'")->fetch_assoc()['count'];
-$ready_for_delivery_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE kitchen_order_status='ready_for_delivery'")->fetch_assoc()['count'];
+$cancelled_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status='cancelled'")->fetch_assoc()['count'];
 
 // Get delivery personnel list for assignment
 $delivery_personnel = $conn->query("SELECT u.user_id, u.u_name FROM users u 
@@ -205,10 +207,22 @@ $delivery_personnel = $conn->query("SELECT u.user_id, u.u_name FROM users u
             box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
         }
 
-        .status-in-progress {
-            background: linear-gradient(135deg, var(--dark-green), #4a7c59);
+        .status-preparing {
+            background: linear-gradient(135deg, #ff9800, #ffb74d);
             color: white;
-            box-shadow: 0 2px 8px rgba(61, 111, 93, 0.3);
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+        }
+
+        .status-ready_for_pickup, .status-ready-for-pickup {
+            background: linear-gradient(135deg, #2196f3, #64b5f6);
+            color: white;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+        }
+
+        .status-in_transit, .status-in-transit {
+            background: linear-gradient(135deg, #9c27b0, #ba68c8);
+            color: white;
+            box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
         }
 
         .status-delivered {
@@ -482,39 +496,57 @@ $delivery_personnel = $conn->query("SELECT u.user_id, u.u_name FROM users u
 
                 <!-- Orders Summary Cards -->
                 <div class="row order-summary-cards mb-4">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-center py-3">
                             <div class="card-body">
                                 <i class="fas fa-clock fa-2x mb-2"></i>
                                 <h2><?php echo $pending_count; ?></h2>
-                                <h5>Pending Orders</h5>
+                                <h5>Pending</h5>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-center py-3">
                             <div class="card-body">
                                 <i class="fas fa-motorcycle fa-2x mb-2"></i>
-                                <h2><?php echo $in_progress_count; ?></h2>
-                                <h5>In Progress</h5>
+                                <h2><?php echo $preparing_count; ?></h2>
+                                <h5>Preparing</h5>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-center py-3">
                             <div class="card-body">
                                 <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <h2><?php echo $ready_count; ?></h2>
+                                <h5>Ready</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center py-3">
+                            <div class="card-body">
+                                <i class="fas fa-shipping-fast fa-2x mb-2"></i>
+                                <h2><?php echo $in_transit_count; ?></h2>
+                                <h5>In Transit</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center py-3">
+                            <div class="card-body">
+                                <i class="fas fa-truck fa-2x mb-2"></i>
                                 <h2><?php echo $delivered_count; ?></h2>
                                 <h5>Delivered</h5>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-center py-3">
                             <div class="card-body">
-                                <i class="fas fa-truck fa-2x mb-2"></i>
-                                <h2><?php echo $ready_for_delivery_count; ?></h2>
-                                <h5>Ready for Delivery</h5>
+                                <i class="fas fa-times-circle fa-2x mb-2"></i>
+                                <h2><?php echo $cancelled_count; ?></h2>
+                                <h5>Cancelled</h5>
                             </div>
                         </div>
                     </div>
@@ -586,9 +618,6 @@ $delivery_personnel = $conn->query("SELECT u.user_id, u.u_name FROM users u
                                                             <div class="btn-group">
                                                                 <button class="btn btn-sm btn-accent" onclick="viewOrderDetails(<?php echo $order['order_id']; ?>)">
                                                                     <i class="fas fa-eye"></i>
-                                                                </button>
-                                                                <button class="btn btn-sm btn-primary" onclick="updateOrderStatus(<?php echo $order['order_id']; ?>)">
-                                                                    <i class="fas fa-edit"></i>
                                                                 </button>
                                                                 <button class="btn btn-sm btn-secondary" onclick="assignDelivery(<?php echo $order['order_id']; ?>)">
                                                                     <i class="fas fa-truck"></i>
@@ -675,53 +704,7 @@ $delivery_personnel = $conn->query("SELECT u.user_id, u.u_name FROM users u
         </div>
     </div>
 
-    <!-- Update Status Modal -->
-    <div class="modal fade" id="updateStatusModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header" style="background-color: var(--primary); color: white;">
-                    <h5 class="modal-title">Update Order Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="updateStatusForm">
-                        <input type="hidden" id="updateOrderId" name="order_id">
-                        
-                        <div class="mb-3">
-                            <label for="orderStatus" class="form-label">Order Status</label>
-                            <select class="form-select" id="orderStatus" name="order_status" required>
-                                <option value="">Select Status</option>
-                                <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="kitchenStatus" class="form-label">Kitchen Status</label>
-                            <select class="form-select" id="kitchenStatus" name="kitchen_status">
-                                <option value="">Select Status</option>
-                                <option value="new">New</option>
-                                <option value="preparing">Preparing</option>
-                                <option value="ready_for_delivery">Ready for Delivery</option>
-                                <option value="delivered">Delivered</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="statusNotes" class="form-label">Notes</label>
-                            <textarea class="form-control" id="statusNotes" name="notes" rows="3"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="saveStatusBtn">Save Changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Assign Delivery Modal -->
     <div class="modal fade" id="assignDeliveryModal" tabindex="-1" aria-hidden="true">
@@ -792,7 +775,9 @@ $delivery_personnel = $conn->query("SELECT u.user_id, u.u_name FROM users u
                             <select class="form-select" id="statusFilter" name="status">
                                 <option value="">All Statuses</option>
                                 <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
+                                <option value="preparing">Preparing</option>
+                                <option value="ready_for_pickup">Ready for Pickup</option>
+                                <option value="in_transit">In Transit</option>
                                 <option value="delivered">Delivered</option>
                                 <option value="cancelled">Cancelled</option>
                             </select>

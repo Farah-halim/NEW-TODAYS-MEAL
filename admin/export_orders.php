@@ -27,10 +27,10 @@ fputcsv($output, [
     'Type',
     'Total Price',
     'Status',
-    'Kitchen Status',
     'Delivery Zone',
     'Delivery Status',
-    'Delivery Person'
+    'Delivery Person',
+    'Payment Method'
 ]);
 
 // Get filtered parameters if provided
@@ -92,11 +92,11 @@ while ($row = $result->fetch_assoc()) {
         $row['kitchen_name'] ?? 'Unknown',
         ucfirst($row['ord_type']),
         number_format($row['total_price'], 2),
-        ucfirst($row['order_status']),
-        ucfirst($row['kitchen_order_status']),
+        ucfirst(str_replace('_', ' ', $row['order_status'])),
         $row['delivery_zone'],
         $row['delivery_status'] ? ucfirst($row['delivery_status']) : 'Not Assigned',
-        $row['delivery_man_name'] ?? 'Not Assigned'
+        $row['delivery_man_name'] ?? 'Not Assigned',
+        ucfirst($row['p_method'] ?? 'N/A')
     ]);
 }
 

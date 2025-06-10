@@ -18,39 +18,41 @@ $admin_actions_query = "
     FROM admin_actions aa 
     LEFT JOIN users u ON aa.admin_id = u.user_id 
     ORDER BY aa.created_at DESC 
-    LIMIT 10
+    LIMIT 50
 ";
 $admin_actions_result = $conn->query($admin_actions_query);
 
 // Fetch flagged issues
 $pending_orders = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'pending'")->fetch_assoc()['count'];
-$ready_for_delivery = $conn->query("SELECT COUNT(*) as count FROM orders WHERE kitchen_order_status = 'ready_for_delivery'")->fetch_assoc()['count'];
+$ready_for_pickup = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'ready_for_pickup'")->fetch_assoc()['count'];
 $pending_approvals = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_owner WHERE is_approved = 0")->fetch_assoc()['count'];
 $delivery_pending_approvals = $conn->query("SELECT COUNT(*) as count FROM delivery_man WHERE is_approved = 0")->fetch_assoc()['count'];
-$total_flagged_issues = $pending_orders + $ready_for_delivery + $pending_approvals + $delivery_pending_approvals;
+$total_flagged_issues = $pending_orders + $ready_for_pickup + $pending_approvals + $delivery_pending_approvals;
 
 // Fetch live orders with real data
 $live_orders_query = "
     SELECT o.order_id, u.u_name as customer_name, ko.business_name, 
-           o.order_status, o.kitchen_order_status, o.order_date, o.total_price
+           o.order_status, o.order_date, o.total_price
     FROM orders o
     JOIN customer c ON o.customer_id = c.user_id
     JOIN users u ON c.user_id = u.user_id
     JOIN cloud_kitchen_owner ko ON o.cloud_kitchen_id = ko.user_id
-    WHERE o.order_status != 'delivered' 
-    AND (
-        o.order_status IN ('pending', 'in_progress') 
-        OR o.kitchen_order_status IN ('new', 'preparing', 'ready_for_delivery')
-    )
+    WHERE o.order_status IN ('pending', 'preparing', 'ready_for_pickup', 'in_transit')
     ORDER BY o.order_date DESC
-    LIMIT 10
+    LIMIT 15
 ";
 $live_orders_result = $conn->query($live_orders_query);
 
 // Count order statuses
 $pending_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'pending'")->fetch_assoc()['count'];
-$in_progress_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'in_progress'")->fetch_assoc()['count'];
+$preparing_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'preparing'")->fetch_assoc()['count'];
+$ready_for_pickup_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'ready_for_pickup'")->fetch_assoc()['count'];
+$in_transit_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'in_transit'")->fetch_assoc()['count'];
 $delivered_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'delivered'")->fetch_assoc()['count'];
+$cancelled_count = $conn->query("SELECT COUNT(*) as count FROM orders WHERE order_status = 'cancelled'")->fetch_assoc()['count'];
+
+// Group related statuses for better display
+$active_orders_count = $preparing_count + $ready_for_pickup_count + $in_transit_count;
 
 // Monthly order data for performance chart
 $monthly_orders_query = "
@@ -122,18 +124,39 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
         }
 
         .status-pending {
-            background-color: #ffd700;
+            background-color: #ffc107;
             color: #6a4125;
+            border: 1px solid #e0a800;
         }
 
-        .status-progress {
-            background-color: #3d6f5d;
+        .status-preparing {
+            background-color: #17a2b8;
             color: white;
+            border: 1px solid #138496;
+        }
+
+        .status-ready {
+            background-color: #6610f2;
+            color: white;
+            border: 1px solid #520dc2;
+        }
+
+        .status-transit {
+            background-color: #6c757d;
+            color: white;
+            border: 1px solid #545b62;
         }
 
         .status-delivered {
-            background-color: #4CAF50;
+            background-color: #28a745;
             color: white;
+            border: 1px solid #1e7e34;
+        }
+
+        .status-cancelled {
+            background-color: #dc3545;
+            color: white;
+            border: 1px solid #bd2130;
         }
 
         .alert-section {
@@ -212,10 +235,27 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
                 <h4 class="mb-3">Live Orders</h4>
                 <div class="order-status-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <span class="status-badge status-pending me-2"><?php echo $pending_count; ?> Pending</span>
-                            <span class="status-badge status-progress me-2"><?php echo $in_progress_count; ?> In Progress</span>
-                            <span class="status-badge status-delivered"><?php echo $delivered_count; ?> Delivered</span>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="status-badge status-pending">
+                                <i class="fas fa-clock me-1"></i><?php echo $pending_count; ?> Pending
+                            </span>
+                            <span class="status-badge status-preparing">
+                                <i class="fas fa-utensils me-1"></i><?php echo $preparing_count; ?> Preparing
+                            </span>
+                            <span class="status-badge status-ready">
+                                <i class="fas fa-box me-1"></i><?php echo $ready_for_pickup_count; ?> Ready for Pickup
+                            </span>
+                            <span class="status-badge status-transit">
+                                <i class="fas fa-shipping-fast me-1"></i><?php echo $in_transit_count; ?> In Transit
+                            </span>
+                            <span class="status-badge status-delivered">
+                                <i class="fas fa-check-circle me-1"></i><?php echo $delivered_count; ?> Delivered
+                            </span>
+                            <?php if ($cancelled_count > 0): ?>
+                            <span class="status-badge status-cancelled">
+                                <i class="fas fa-times-circle me-1"></i><?php echo $cancelled_count; ?> Cancelled
+                            </span>
+                            <?php endif; ?>
                         </div>
                         <button class="btn btn-primary" style="background-color: #3d6f5d;" onclick="location.reload()">
                             <i class="fas fa-sync-alt me-2"></i>Refresh
@@ -229,7 +269,6 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
                                     <th>Customer</th>
                                     <th>Cloud Kitchen</th>
                                     <th>Order Status</th>
-                                    <th>Kitchen Status</th>
                                     <th>Total</th>
                                     <th>Time</th>
                                     <th>Actions</th>
@@ -249,39 +288,26 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
                                                     case 'pending':
                                                         $badge_class = 'bg-warning';
                                                         break;
-                                                    case 'in_progress':
+                                                    case 'preparing':
                                                         $badge_class = 'bg-info';
+                                                        break;
+                                                    case 'ready_for_pickup':
+                                                        $badge_class = 'bg-primary';
+                                                        break;
+                                                    case 'in_transit':
+                                                        $badge_class = 'bg-secondary';
                                                         break;
                                                     case 'delivered':
                                                         $badge_class = 'bg-success';
                                                         break;
-                                                    default:
-                                                        $badge_class = 'bg-secondary';
-                                                }
-                                                ?>
-                                                <span class="badge <?php echo $badge_class; ?>"><?php echo ucfirst($order['order_status']); ?></span>
-                                            </td>
-                                            <td>
-                                                <?php
-                                                $kitchen_badge_class = '';
-                                                switch ($order['kitchen_order_status']) {
-                                                    case 'new':
-                                                        $kitchen_badge_class = 'bg-primary';
-                                                        break;
-                                                    case 'preparing':
-                                                        $kitchen_badge_class = 'bg-warning';
-                                                        break;
-                                                    case 'ready_for_delivery':
-                                                        $kitchen_badge_class = 'bg-success';
-                                                        break;
-                                                    case 'delivered':
-                                                        $kitchen_badge_class = 'bg-dark';
+                                                    case 'cancelled':
+                                                        $badge_class = 'bg-danger';
                                                         break;
                                                     default:
-                                                        $kitchen_badge_class = 'bg-secondary';
+                                                        $badge_class = 'bg-light';
                                                 }
                                                 ?>
-                                                <span class="badge <?php echo $kitchen_badge_class; ?>"><?php echo ucfirst(str_replace('_', ' ', $order['kitchen_order_status'])); ?></span>
+                                                <span class="badge <?php echo $badge_class; ?>"><?php echo ucfirst(str_replace('_', ' ', $order['order_status'])); ?></span>
                                             </td>
                                             <td>$<?php echo number_format($order['total_price'], 2); ?></td>
                                             <td><?php echo date('H:i A', strtotime($order['order_date'])); ?></td>
@@ -354,11 +380,11 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
             <div class="col-md-6">
                 <h4 class="mb-3">Flagged Issues</h4>
                 <div style="max-height: 300px; overflow-y: auto;">
-                    <?php if ($ready_for_delivery > 0): ?>
+                    <?php if ($ready_for_pickup > 0): ?>
                         <div class="flagged-item">
                             <i class="fas fa-truck text-success me-2"></i>
-                            <strong><?php echo $ready_for_delivery; ?> orders ready for delivery</strong>
-                            <br><small class="text-muted">Orders waiting for delivery assignment</small>
+                            <strong><?php echo $ready_for_pickup; ?> orders ready for pickup</strong>
+                            <br><small class="text-muted">Orders waiting for pickup</small>
                         </div>
                     <?php endif; ?>
                     
@@ -475,10 +501,10 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <?php if ($ready_for_delivery > 0): ?>
+                    <?php if ($ready_for_pickup > 0): ?>
                         <div class="notification-item p-2 border-bottom">
-                            <strong>Ready for Delivery</strong>
-                            <p class="mb-0"><?php echo $ready_for_delivery; ?> orders ready for delivery assignment</p>
+                            <strong>Ready for Pickup</strong>
+                            <p class="mb-0"><?php echo $ready_for_pickup; ?> orders ready for pickup</p>
                             <small class="text-muted">Requires immediate attention</small>
                         </div>
                     <?php endif; ?>
@@ -599,7 +625,7 @@ $blocked_kitchens = $conn->query("SELECT COUNT(*) as count FROM cloud_kitchen_ow
         // Auto-refresh every 30 seconds for live updates
         setInterval(() => {
             // Only refresh if there are active orders to avoid unnecessary requests
-            if (<?php echo $pending_count + $in_progress_count; ?> > 0) {
+            if (<?php echo $pending_count + $active_orders_count; ?> > 0) {
                 location.reload();
             }
         }, 30000);

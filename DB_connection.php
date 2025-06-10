@@ -1,7 +1,7 @@
 <?php
 // Database Configuration
 $host = "localhost";  
-$dbname = "today's meal";  
+$dbname = "today_s_meal_10";  
 $username = "root";  
 $password = "";  
 

@@ -36,6 +36,10 @@ $actionsQuery = "SELECT aa.action_type, aa.action_target, aa.created_at, u.u_nam
                  FROM admin_actions aa
                  JOIN admin a ON aa.admin_id = a.user_id
                  JOIN users u ON a.user_id = u.user_id
+                 WHERE aa.action_type IN ('Approved Kitchen', 'Rejected Kitchen', 'Blocked kitchen', 'Unblocked kitchen', 
+                                         'Suspended kitchen', 'Unsuspended kitchen', 'Created category', 'Created subcategory',
+                                         'Document Notes Added', 'Document Notes Cleared') 
+                    OR aa.action_type LIKE 'Status Changed:%'
                  ORDER BY aa.created_at DESC
                  LIMIT 10";
 

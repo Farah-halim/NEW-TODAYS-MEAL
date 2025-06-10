@@ -55,13 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Setup status update functionality
-    const saveStatusBtn = document.getElementById('saveStatusBtn');
-    if (saveStatusBtn) {
-        saveStatusBtn.addEventListener('click', function() {
-            saveOrderStatus();
-        });
-    }
+
 
     // Setup delivery assignment functionality
     const saveDeliveryAssignmentBtn = document.getElementById('saveDeliveryAssignmentBtn');
@@ -120,8 +114,6 @@ function filterOrdersTable(query) {
         updateEmptyState(false, '', activeTabPane);
     }
 }
-
-
 
 /**
  * Update empty states for all tabs based on search results
@@ -258,7 +250,7 @@ function updateOrdersTable(orders) {
             <td>$${parseFloat(order.total_price).toFixed(2)}</td>
             <td>
                 <span class="status-pill status-${order.order_status}">
-                    ${order.order_status.charAt(0).toUpperCase() + order.order_status.slice(1)}
+                    ${getStatusDisplayText(order.order_status)}
                 </span>
             </td>
             <td>
@@ -381,7 +373,7 @@ function renderOrderDetails(container, orderData) {
                 <p><strong>Date:</strong> ${formattedDate}</p>
                 <p><strong>Status:</strong> 
                     <span class="status-pill status-${order.order_status}">
-                        ${order.order_status.charAt(0).toUpperCase() + order.order_status.slice(1)}
+                        ${getStatusDisplayText(order.order_status)}
                     </span>
                 </p>
                 <p><strong>Type:</strong> ${order.ord_type.charAt(0).toUpperCase() + order.ord_type.slice(1)}</p>
@@ -534,65 +526,7 @@ function renderOrderDetails(container, orderData) {
     container.innerHTML = html;
 }
 
-/**
- * Update order status
- */
-function updateOrderStatus(orderId) {
-    // Reset the form
-    document.getElementById('updateStatusForm').reset();
-    
-    // Set the order ID
-    document.getElementById('updateOrderId').value = orderId;
-    
-    // Fetch current status to pre-fill the form
-    fetch(`get_order_status.php?id=${orderId}`)
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('orderStatus').value = data.order_status;
-        document.getElementById('kitchenStatus').value = data.kitchen_order_status;
-        
-        // Show the modal
-        const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
-        modal.show();
-    })
-    .catch(error => {
-        console.error('Error fetching order status:', error);
-        alert('Error fetching order status. Please try again.');
-    });
-}
 
-/**
- * Save updated order status
- */
-function saveOrderStatus() {
-    const form = document.getElementById('updateStatusForm');
-    const formData = new FormData(form);
-    
-    fetch('update_order_status.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Hide modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
-            modal.hide();
-            
-            // Show success message
-            alert('Order status updated successfully!');
-            
-            // Refresh orders list
-            refreshOrders();
-        } else {
-            alert('Error updating order status: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error updating order status:', error);
-        alert('Error updating order status. Please try again.');
-    });
-}
 
 /**
  * Assign delivery personnel to an order
@@ -1130,4 +1064,17 @@ document.addEventListener('DOMContentLoaded', function() {
             printWindow.document.close();
         });
     }
-}); 
+});
+
+// Update the status display for new enum values
+function getStatusDisplayText(status) {
+    const statusMap = {
+        'pending': 'Pending',
+        'preparing': 'Preparing', 
+        'ready_for_pickup': 'Ready for Pickup',
+        'in_transit': 'In Transit',
+        'delivered': 'Delivered',
+        'cancelled': 'Cancelled'
+    };
+    return statusMap[status] || status;
+} 

@@ -30,6 +30,14 @@ function processRegistration($conn) {
         return "Please select at least one cuisine specialty";
     }
 
+    // Check required documents
+    $requiredDocuments = ['national_id_doc', 'business_license_doc'];
+    foreach ($requiredDocuments as $docField) {
+        if (!isset($_FILES[$docField]) || $_FILES[$docField]['error'] !== UPLOAD_ERR_OK) {
+            return "Please upload all required documents (National ID and Business License)";
+        }
+    }
+
     $fullname = $conn->real_escape_string($_POST['fullname']);
     $email = $conn->real_escape_string($_POST['email']);
     $phone = $conn->real_escape_string($_POST['phone']);
@@ -49,11 +57,14 @@ function processRegistration($conn) {
         $experience = $conn->real_escape_string($_POST['experience']);
         $customized_orders = ($_POST['custom-orders'] === 'yes') ? 1 : 0;
 
-        $sql = "INSERT INTO external_user (user_id, address, ext_role) VALUES ('$user_id', '$address', 'cloud_kitchen_owner')";
+        // Get the first selected cuisine as speciality_id
+        $speciality_id = (int)$_POST['cuisine'][0];
+
+        $sql = "INSERT INTO external_user (user_id, address, ext_role, latitude, longitude, zone_id) VALUES ('$user_id', '$address', 'cloud_kitchen_owner', 0.0000000, 0.0000000, 2)";
         if (!$conn->query($sql)) throw new Exception("External user insert failed: " . $conn->error);
 
-        $sql = "INSERT INTO cloud_kitchen_owner (user_id, business_name, c_n_id, years_of_experience, customized_orders, start_year) VALUES 
-                ('$user_id', '$business_name', '$c_n_id', '$experience', '$customized_orders', YEAR(NOW()))";
+        $sql = "INSERT INTO cloud_kitchen_owner (user_id, business_name, c_n_id, years_of_experience, customized_orders, start_year, speciality_id, is_approved) VALUES 
+                ('$user_id', '$business_name', '$c_n_id', '$experience', '$customized_orders', YEAR(NOW()), '$speciality_id', 0)";
         if (!$conn->query($sql)) throw new Exception("Kitchen owner insert failed: " . $conn->error);
 
         foreach ($_POST['cuisine'] as $cat_id) {
@@ -64,14 +75,106 @@ function processRegistration($conn) {
             }
         }
 
-        return "Cloud Kitchen registration successful!";
+        // Handle document uploads
+        $uploadResult = handleDocumentUploads($user_id, $conn);
+        if ($uploadResult !== true) {
+            throw new Exception($uploadResult);
+        }
+
+        $conn->commit();
+        return "Cloud Kitchen registration successful! Your documents have been uploaded and are pending admin review.";
     } catch (Exception $e) {
         $conn->rollback();
         error_log("Registration Error: " . $e->getMessage());
         return $e->getMessage();
-    } finally {
-        $conn->commit();
     }
+}
+
+function handleDocumentUploads($kitchen_id, $conn) {
+    // Create uploads directory structure
+    $baseUploadDir = "../admin/c/c/uploads/documents/" . $kitchen_id . "/";
+    if (!file_exists($baseUploadDir)) {
+        if (!mkdir($baseUploadDir, 0755, true)) {
+            return "Failed to create upload directory";
+        }
+    }
+
+    $documents = [
+        'national_id_doc' => [
+            'type' => 'national_id',
+            'name' => 'National ID',
+            'required' => true
+        ],
+        'business_license_doc' => [
+            'type' => 'business_license', 
+            'name' => 'Business License',
+            'required' => true
+        ],
+        'health_cert_doc' => [
+            'type' => 'health_certificate',
+            'name' => 'Health Certificate',
+            'required' => false
+        ],
+        'tax_cert_doc' => [
+            'type' => 'tax_certificate',
+            'name' => 'Tax Certificate', 
+            'required' => false
+        ],
+        'kitchen_photos_doc' => [
+            'type' => 'kitchen_photos',
+            'name' => 'Kitchen Photos',
+            'required' => false
+        ]
+    ];
+
+    foreach ($documents as $fieldName => $docInfo) {
+        if (!isset($_FILES[$fieldName]) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
+            if ($docInfo['required']) {
+                return "Required document missing: " . $docInfo['name'];
+            }
+            continue;
+        }
+
+        $file = $_FILES[$fieldName];
+        
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return "Upload error for " . $docInfo['name'] . ": " . $file['error'];
+        }
+
+        // Validate file type
+        $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+        if (!in_array($file['type'], $allowedTypes)) {
+            return "Invalid file type for " . $docInfo['name'] . ". Please upload PDF, JPEG, or PNG files only.";
+        }
+
+        // Validate file size (max 5MB)
+        if ($file['size'] > 5 * 1024 * 1024) {
+            return "File too large for " . $docInfo['name'] . ". Maximum size is 5MB.";
+        }
+
+        // Generate safe filename
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $safeFileName = strtolower($docInfo['type']) . '_' . time() . '.' . $extension;
+        $targetPath = $baseUploadDir . $safeFileName;
+        $relativePath = "uploads/documents/" . $kitchen_id . "/" . $safeFileName;
+
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+            return "Failed to save " . $docInfo['name'];
+        }
+
+        // Insert document record into database
+        $sql = "INSERT INTO kitchen_documents (kitchen_id, document_type, document_name, file_path, file_size, file_type, upload_date) 
+                VALUES (?, ?, ?, ?, ?, ?, NOW())";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("isssss", $kitchen_id, $docInfo['type'], $docInfo['name'], $relativePath, $file['size'], $file['type']);
+        
+        if (!$stmt->execute()) {
+            return "Failed to save document record for " . $docInfo['name'] . ": " . $stmt->error;
+        }
+    }
+
+    return true;
 }
 ?>
 
@@ -290,6 +393,62 @@ function processRegistration($conn) {
                                 </select>
                             </div>
                         </div>
+
+                        <!-- Document Upload Section -->
+                        <div class="document-section">
+                            <h3><i data-lucide="file-text"></i> Required Documents</h3>
+                            <p class="document-info">Upload the following documents for verification. All documents must be in PDF, JPEG, or PNG format (max 5MB each).</p>
+                            
+                            <div class="input-group full-width">
+                                <label for="national_id_doc">
+                                    <i data-lucide="credit-card"></i> National ID Document <span class="required">*</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="file" id="national_id_doc" name="national_id_doc" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <small class="file-help">Upload a clear photo or scan of your National ID</small>
+                                </div>
+                            </div>
+
+                            <div class="input-group full-width">
+                                <label for="business_license_doc">
+                                    <i data-lucide="briefcase"></i> Business License Document <span class="required">*</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="file" id="business_license_doc" name="business_license_doc" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <small class="file-help">Upload your official business license or registration certificate</small>
+                                </div>
+                            </div>
+
+                            <div class="input-group full-width">
+                                <label for="health_cert_doc">
+                                    <i data-lucide="shield-check"></i> Health Certificate (Optional)
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="file" id="health_cert_doc" name="health_cert_doc" accept=".pdf,.jpg,.jpeg,.png">
+                                    <small class="file-help">Upload health department certification if available</small>
+                                </div>
+                            </div>
+
+                            <div class="input-group full-width">
+                                <label for="tax_cert_doc">
+                                    <i data-lucide="receipt"></i> Tax Certificate (Optional)
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="file" id="tax_cert_doc" name="tax_cert_doc" accept=".pdf,.jpg,.jpeg,.png">
+                                    <small class="file-help">Upload tax registration certificate if available</small>
+                                </div>
+                            </div>
+
+                            <div class="input-group full-width">
+                                <label for="kitchen_photos_doc">
+                                    <i data-lucide="camera"></i> Kitchen Photos (Optional)
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="file" id="kitchen_photos_doc" name="kitchen_photos_doc" accept=".jpg,.jpeg,.png" multiple>
+                                    <small class="file-help">Upload photos of your kitchen workspace</small>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="terms">
                             <label for="terms">
@@ -300,12 +459,168 @@ function processRegistration($conn) {
                         <button type="submit" class="submit-btn">Create Cloud Kitchen Account</button>
                     </form>
                     <p class="login-link">Already have an account? <a href="login.php">Sign in</a></p>
+                    
+                    <div class="additional-links">
+                        <p class="status-link">Already registered? Check your document status:</p>
+                        <a href="documents_status.php" class="document-status-btn">
+                            <i data-lucide="file-check"></i>
+                            View Document Status & Admin Feedback
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+    <style>
+        .document-section {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            border: 2px dashed #e57e24;
+            border-radius: 8px;
+            background-color: #fdf9f5;
+        }
+        
+        .document-section h3 {
+            color: #e57e24;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .document-info {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+        
+        .file-help {
+            display: block;
+            color: #6c757d;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+        
+        input[type="file"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="file"]:hover {
+            border-color: #e57e24;
+        }
+        
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #e57e24;
+            box-shadow: 0 0 0 2px rgba(229, 126, 36, 0.2);
+        }
+        
+        .required {
+            color: #dc3545;
+        }
+        
+        .additional-links {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .status-link {
+            margin: 0 0 1rem 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .document-status-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(23, 162, 184, 0.2);
+        }
+        
+        .document-status-btn:hover {
+            background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+            color: white;
+        }
+        
+        .document-status-btn i {
+            width: 18px;
+            height: 18px;
+        }
+    </style>
+    
     <script>
         lucide.createIcons();
+        
+        // File upload validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            
+            fileInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file) {
+                        // Check file size (5MB limit)
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('File size must be less than 5MB');
+                            this.value = '';
+                            return;
+                        }
+                        
+                        // Check file type
+                        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+                        if (!allowedTypes.includes(file.type)) {
+                            alert('Please upload only PDF, JPEG, or PNG files');
+                            this.value = '';
+                            return;
+                        }
+                    }
+                });
+            });
+            
+            // Form submission validation
+            const form = document.getElementById('registrationForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const requiredDocs = ['national_id_doc', 'business_license_doc'];
+                    let allRequiredUploaded = true;
+                    
+                    requiredDocs.forEach(docName => {
+                        const input = document.querySelector(`input[name="${docName}"]`);
+                        if (!input || !input.files.length) {
+                            allRequiredUploaded = false;
+                        }
+                    });
+                    
+                    if (!allRequiredUploaded) {
+                        e.preventDefault();
+                        alert('Please upload all required documents (National ID and Business License)');
+                        return false;
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
